@@ -5434,6 +5434,7 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
       <strong>Total: R$ <span id="detalhe-total">0,00</span></strong>
     </div>
     <div class="modal-footer">
+      <button class="btn btn-primary" onclick="imprimirPedidoAtual()">Imprimir</button>
       <button class="btn btn-secondary" onclick="fecharModal('modal-detalhe-pedido')">Fechar</button>
     </div>
   </div>
@@ -7777,36 +7778,240 @@ if(typeof atualizarDashboardSeVisivel === 'function'){
     toast(e.message || 'Erro ao criar pedido','error');
   }
 }
+
+let pedidoAtualImpressao = null;
+
+function valorPedidoSeguro(valor){
+  return escapeHtmlProduto(valor || '-');
+}
+
+function juntarEnderecoPedido(p){
+  const partes = [];
+
+  if(p.cliente_endereco){
+    partes.push(p.cliente_endereco);
+  }
+
+  const cidadeUf = [
+    p.cliente_cidade || '',
+    p.cliente_estado || ''
+  ].filter(Boolean).join('/');
+
+  if(cidadeUf){
+    partes.push(cidadeUf);
+  }
+
+  return partes.join(' - ') || '-';
+}
+
+function nomeEmpresaPedido(empresa){
+  const e = normalizarEmpresaFront(empresa || empresaAtual);
+
+  if(e === 'sleep'){
+    return 'Sleep Colchões';
+  }
+
+  if(e === 'tais'){
+    return 'Thaís Móveis';
+  }
+
+  return 'ACP Indústria de Móveis';
+}
+
+function logoEmpresaPedido(empresa){
+  const e = normalizarEmpresaFront(empresa || empresaAtual);
+
+  if(e === 'sleep'){
+    return 'logo-sleep.png';
+  }
+
+  if(e === 'tais'){
+    return 'logo-thais.png';
+  }
+
+  return 'logo-acp.png';
+}
+
 async function verPedido(id){
   try{
-    const p=await api('/api/pedidos/'+id);
-    document.getElementById('detalhe-numero').textContent=p.numero;
+    const p = await api('/api/pedidos/' + id);
+
+    pedidoAtualImpressao = p;
+
+    document.getElementById('detalhe-numero').textContent = p.numero;
+
+    const enderecoCliente = juntarEnderecoPedido(p);
 
     document.getElementById('detalhe-info').innerHTML =
-      '<b>Cliente:</b> ' + p.cliente_nome +
+      '<b>Cliente:</b> ' + valorPedidoSeguro(p.cliente_nome) +
+      '<br><b>CPF/CNPJ:</b> ' + valorPedidoSeguro(p.cliente_cnpj_cpf) +
+      '<br><b>Endereço:</b> ' + valorPedidoSeguro(enderecoCliente) +
+      '<br><b>Telefone:</b> ' + valorPedidoSeguro(p.cliente_telefone) +
+      '<br><b>Email:</b> ' + valorPedidoSeguro(p.cliente_email) +
       '<br><b>Data:</b> ' + formatData(p.data_pedido) +
       '<br><b>Entrega:</b> ' + formatData(p.data_entrega) +
-      // 👇 Só mostra se tiver cor
-      (p.cor ? '<br><b>Cor:</b> ' + p.cor : '') +
+      (p.cor ? '<br><b>Cor:</b> ' + valorPedidoSeguro(p.cor) : '') +
       '<br><b>Status:</b> ' + badgeStatus(p.status) +
-      (p.observacao ? '<br><b>Obs:</b> ' + p.observacao : '');
+      (p.observacao ? '<br><b>Obs:</b> ' + valorPedidoSeguro(p.observacao) : '');
 
-   document.getElementById('detalhe-itens').innerHTML = p.itens.map(function(i){
-  return '<tr>'+
-           '<td>'+i.produto_codigo+' - '+i.produto_nome+'</td>'+
-           '<td>'+(i.cor_item || '-')+'</td>'+
-           '<td>'+i.quantidade+'</td>'+
-           '<td>R$ '+formatMoeda(i.preco_unitario)+'</td>'+
-           '<td>'+i.desconto+'%</td>'+
-           '<td>R$ '+formatMoeda(i.total)+'</td>'+
-         '</tr>';
-}).join('');
+    document.getElementById('detalhe-itens').innerHTML = (p.itens || []).map(function(i){
+      return '<tr>' +
+               '<td>' + valorPedidoSeguro((i.produto_codigo ? i.produto_codigo + ' - ' : '') + (i.produto_nome || '')) + '</td>' +
+               '<td>' + valorPedidoSeguro(i.cor_item || '-') + '</td>' +
+               '<td>' + valorPedidoSeguro(i.quantidade) + '</td>' +
+               '<td>R$ ' + formatMoeda(i.preco_unitario) + '</td>' +
+               '<td>' + valorPedidoSeguro(i.desconto || 0) + '%</td>' +
+               '<td>R$ ' + formatMoeda(i.total) + '</td>' +
+             '</tr>';
+    }).join('');
 
     document.getElementById('detalhe-total').textContent = formatMoeda(p.total);
     abrirModal('modal-detalhe-pedido');
-  }catch{
+  }catch(e){
+    console.error('Erro ao carregar pedido:', e);
     toast('Erro ao carregar pedido','error');
   }
+}
+
+function imprimirPedidoAtual(){
+  if(!pedidoAtualImpressao){
+    toast('Abra um pedido antes de imprimir','error');
+    return;
+  }
+
+  imprimirPedido(pedidoAtualImpressao);
+}
+
+function imprimirPedido(p){
+  const logoKcn = 'logo.png';
+  const logoEmpresa = logoEmpresaPedido(p.empresa);
+  const empresaNome = nomeEmpresaPedido(p.empresa);
+  const enderecoCliente = juntarEnderecoPedido(p);
+
+  const linhasItens = (p.itens || []).map(function(i){
+    const produto = [
+      i.produto_codigo || '',
+      i.produto_nome || ''
+    ].filter(Boolean).join(' - ');
+
+    return '<tr>' +
+      '<td>' + valorPedidoSeguro(produto) + '</td>' +
+      '<td>' + valorPedidoSeguro(i.cor_item || '-') + '</td>' +
+      '<td class="center">' + valorPedidoSeguro(i.quantidade) + '</td>' +
+      '<td class="right">R$ ' + formatMoeda(i.preco_unitario) + '</td>' +
+      '<td class="center">' + valorPedidoSeguro(i.desconto || 0) + '%</td>' +
+      '<td class="right">R$ ' + formatMoeda(i.total) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  const html = '<!DOCTYPE html>' +
+  '<html lang="pt-BR">' +
+  '<head>' +
+    '<meta charset="UTF-8">' +
+    '<title>Pedido ' + valorPedidoSeguro(p.numero) + '</title>' +
+    '<style>' +
+      '*{box-sizing:border-box}' +
+      'body{font-family:Arial, sans-serif;margin:0;padding:28px;color:#222;background:#fff;font-size:12px}' +
+      '.topo{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #222;padding-bottom:14px;margin-bottom:18px}' +
+      '.logo-box{width:170px;min-height:72px;display:flex;align-items:center}' +
+      '.logo-box.right{justify-content:flex-end;text-align:right}' +
+      '.logo-box img{max-width:155px;max-height:70px;object-fit:contain}' +
+      '.titulo{text-align:center;flex:1;padding:0 18px}' +
+      '.titulo h1{font-size:22px;margin:4px 0 6px;text-transform:uppercase;letter-spacing:.5px}' +
+      '.titulo .sub{font-size:13px;font-weight:bold;color:#555}' +
+      '.secao{border:1px solid #ddd;border-radius:6px;margin-bottom:14px;overflow:hidden}' +
+      '.secao-titulo{background:#f0f0f0;font-weight:bold;padding:8px 10px;text-transform:uppercase;font-size:12px}' +
+      '.grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid #eee}' +
+      '.campo{padding:7px 10px;border-right:1px solid #eee;border-bottom:1px solid #eee;min-height:30px}' +
+      '.campo:nth-child(even){border-right:none}' +
+      '.campo.full{grid-column:1 / -1;border-right:none}' +
+      '.label{font-weight:bold;color:#444}' +
+      'table{width:100%;border-collapse:collapse;margin-top:6px}' +
+      'th{background:#efefef;text-align:left;padding:8px;border:1px solid #ddd;font-size:12px}' +
+      'td{padding:8px;border:1px solid #e3e3e3;vertical-align:top}' +
+      '.center{text-align:center}.right{text-align:right}' +
+      '.total{font-size:16px;font-weight:bold;text-align:right;margin-top:14px}' +
+      '.rodape{margin-top:34px;display:flex;gap:40px;justify-content:space-between}' +
+      '.assinatura{flex:1;text-align:center;border-top:1px solid #333;padding-top:7px;color:#555}' +
+      '@media print{body{padding:18px}.no-print{display:none !important}.secao{break-inside:avoid}button{display:none}}' +
+    '</style>' +
+  '</head>' +
+  '<body>' +
+    '<div class="topo">' +
+      '<div class="logo-box"><img src="' + logoKcn + '" alt="KCN"></div>' +
+      '<div class="titulo">' +
+        '<h1>Pedido de Venda</h1>' +
+        '<div class="sub">KCN Representações</div>' +
+        '<div class="sub">' + valorPedidoSeguro(empresaNome) + '</div>' +
+      '</div>' +
+      '<div class="logo-box right"><img src="' + logoEmpresa + '" alt="' + valorPedidoSeguro(empresaNome) + '"></div>' +
+    '</div>' +
+
+    '<div class="secao">' +
+      '<div class="secao-titulo">Informações do Pedido</div>' +
+      '<div class="grid">' +
+        '<div class="campo"><span class="label">Número:</span> ' + valorPedidoSeguro(p.numero) + '</div>' +
+        '<div class="campo"><span class="label">Status:</span> ' + valorPedidoSeguro(p.status) + '</div>' +
+        '<div class="campo"><span class="label">Data:</span> ' + formatData(p.data_pedido) + '</div>' +
+        '<div class="campo"><span class="label">Entrega:</span> ' + formatData(p.data_entrega) + '</div>' +
+        (p.observacao ? '<div class="campo full"><span class="label">Observação:</span> ' + valorPedidoSeguro(p.observacao) + '</div>' : '') +
+      '</div>' +
+    '</div>' +
+
+    '<div class="secao">' +
+      '<div class="secao-titulo">Informações do Cliente</div>' +
+      '<div class="grid">' +
+        '<div class="campo full"><span class="label">Cliente:</span> ' + valorPedidoSeguro(p.cliente_nome) + '</div>' +
+        '<div class="campo"><span class="label">CPF/CNPJ:</span> ' + valorPedidoSeguro(p.cliente_cnpj_cpf) + '</div>' +
+        '<div class="campo"><span class="label">Código:</span> ' + valorPedidoSeguro(p.cliente_codigo_origem) + '</div>' +
+        '<div class="campo full"><span class="label">Endereço:</span> ' + valorPedidoSeguro(enderecoCliente) + '</div>' +
+        '<div class="campo"><span class="label">Telefone:</span> ' + valorPedidoSeguro(p.cliente_telefone) + '</div>' +
+        '<div class="campo"><span class="label">Email:</span> ' + valorPedidoSeguro(p.cliente_email) + '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="secao">' +
+      '<div class="secao-titulo">Itens do Pedido</div>' +
+      '<table>' +
+        '<thead>' +
+          '<tr>' +
+            '<th>Produto</th>' +
+            '<th style="width:120px">Cor</th>' +
+            '<th style="width:60px">Qtd</th>' +
+            '<th style="width:100px">Preço</th>' +
+            '<th style="width:70px">Desc.</th>' +
+            '<th style="width:110px">Total</th>' +
+          '</tr>' +
+        '</thead>' +
+        '<tbody>' + linhasItens + '</tbody>' +
+      '</table>' +
+      '<div class="total">Total: R$ ' + formatMoeda(p.total) + '</div>' +
+    '</div>' +
+
+    '<div class="rodape">' +
+      '<div class="assinatura">Assinatura do Cliente</div>' +
+      '<div class="assinatura">KCN Representações</div>' +
+    '</div>' +
+
+    '<div class="no-print" style="margin-top:22px;text-align:center">' +
+      '<button onclick="window.print()" style="padding:10px 18px">Imprimir</button> ' +
+      '<button onclick="window.close()" style="padding:10px 18px">Fechar</button>' +
+    '</div>' +
+
+    '<script>window.onload=function(){setTimeout(function(){window.print();},500);};<\\/script>' +
+  '</body>' +
+  '</html>';
+
+  const janela = window.open('', '_blank');
+
+  if(!janela){
+    toast('O navegador bloqueou a janela de impressão','error');
+    return;
+  }
+
+  janela.document.open();
+  janela.document.write(html);
+  janela.document.close();
 }
 
 
@@ -8234,7 +8439,7 @@ async function carregarAssistencias(){
             '<button class="btn btn-primary btn-sm" onclick="verAssistencia('+a.id+')">Ver</button>'+
             '<button class="btn btn-success btn-sm" onclick="concluirAssistencia('+a.id+')">Concluir</button>'+
             '<button class="btn btn-danger btn-sm" onclick="cancelarAssistencia('+a.id+')">Cancelar</button>'+
-            '<button class="btn btn-danger btn-sm" onclick="removerAssistencia('+a.id+', \''+(a.numero || '')+'\')">Remover</button>'+
+            '<button class="btn btn-danger btn-sm" onclick="removerAssistencia('+a.id+')">Remover</button>'+
           '</div>'+
         '</td>'+
       '</tr>';
@@ -8333,7 +8538,8 @@ async function cancelarAssistencia(id){
 }
 
 async function removerAssistencia(id, numero){
-  if(!confirm('Tem certeza que deseja remover a assistência '+numero+'? Essa ação não pode ser desfeita.')){
+  numero = numero || '';
+  if(!confirm('Tem certeza que deseja remover esta assistência' + (numero ? ' ' + numero : '') + '? Essa ação não pode ser desfeita.')){
     return;
   }
 

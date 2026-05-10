@@ -591,7 +591,15 @@ app.get('/api/pedidos/:id', auth, async (req, res) => {
     const pedido = await get(
       `SELECT 
         p.*, 
-        c.razao_social as cliente_nome
+        c.razao_social as cliente_nome,
+        c.nome_fantasia as cliente_fantasia,
+        c.cnpj_cpf as cliente_cnpj_cpf,
+        c.endereco as cliente_endereco,
+        c.cidade as cliente_cidade,
+        c.estado as cliente_estado,
+        c.telefone as cliente_telefone,
+        c.email as cliente_email,
+        c.codigo_origem as cliente_codigo_origem
        FROM pedidos p 
        JOIN clientes c ON c.id = p.cliente_id
        WHERE p.id = ?`,
