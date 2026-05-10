@@ -6714,127 +6714,99 @@ async function inativarCliente(id){
 }
 
 
-
-function normalizarEmpresaProdutoFront(valor){
-  const e = String(valor || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-
-  if(e === 'acp') return 'acp';
-  if(e === 'sleep') return 'sleep';
-  if(e === 'tais' || e === 'thais') return 'tais';
-
-  return '';
-}
-
 function escapeHtmlProduto(valor){
   return String(valor === undefined || valor === null ? '' : valor)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
 }
 
 function escapeJsProduto(valor){
   return String(valor === undefined || valor === null ? '' : valor)
-    .replace(/\\/g, '\\\\')
-    .replace(/'/g, "\\'");
+    .replace(/\\/g,'\\\\')
+    .replace(/'/g,"\\'")
+    .replace(/\n/g,' ');
 }
 
-function produtoUid(p){
-  if(p && p._uid) return p._uid;
-  if(p && p._persistido) return 'api:' + p.id;
-  return 'local:' + empresaAtual + ':' + (p && p.id !== undefined ? p.id : '');
-}
-
-function produtoVisivelNaEmpresaAtual(p){
-  const emp = normalizarEmpresaProdutoFront(p.empresa || p.empresa_produto || p.origem_empresa || p.empresaAtual);
-
-  // Se o backend antigo ainda não tiver coluna "empresa", o produto fica visível em todas.
-  // Quando o backend salvar a coluna empresa, este filtro já separa ACP, Sleep e Taís.
-  return !emp || emp === empresaAtual;
-}
-
-function produtosBaseDaEmpresaAtual(){
+function obterProdutosLocaisEmpresa(empresa){
   let base = [];
 
-  if(empresaAtual === 'acp'){
-    base = (DB_ACP.produtos || []).filter(function(p){
-      return p && p.descricao !== '';
-    });
-  }else if(empresaAtual === 'sleep'){
-    base = DB_SLEEP.produtos || [];
-  }else if(empresaAtual === 'tais'){
-    base = DB_TAIS.produtos || [];
+  if(empresa === 'acp'){
+    base = (DB_ACP.produtos || []).filter(function(p){ return p.descricao !== ''; });
+  }else if(empresa === 'sleep'){
+    base = (DB_SLEEP.produtos || []);
+  }else if(empresa === 'tais'){
+    base = (DB_TAIS.produtos || []);
   }
 
   return base.map(function(p){
-    return Object.assign({}, p, {
-      _persistido: false,
-      _uid: 'local:' + empresaAtual + ':' + p.id
-    });
+    const copia = Object.assign({}, p);
+    copia._origem = 'local';
+    copia._empresa = empresa;
+    copia._uid = 'local:' + empresa + ':' + copia.id;
+    return copia;
   });
 }
 
-async function produtosPersistidosDoBanco(){
+function normalizarProdutoBanco(p){
+  const copia = Object.assign({}, p);
+  copia.id = Number(copia.id);
+  copia.colecao_id = Number(copia.colecao_id || 0);
+  copia.unidade = copia.unidade || 'UN';
+  copia.estoque = Number(copia.estoque || 0);
+  copia.preco_venda = Number(copia.preco_venda || 0);
+  copia._origem = 'api';
+  copia._empresa = 'banco';
+  copia._uid = 'api:' + copia.id;
+  return copia;
+}
+
+async function obterProdutosBanco(){
   try{
     const lista = await api('/api/produtos');
-
-    if(!Array.isArray(lista)){
-      return [];
-    }
-
-    return lista
-      .filter(produtoVisivelNaEmpresaAtual)
-      .map(function(p){
-        return Object.assign({}, p, {
-          _persistido: true,
-          _uid: 'api:' + p.id
-        });
-      });
+    return (lista || []).map(normalizarProdutoBanco);
   }catch(e){
     console.warn('Não foi possível carregar produtos do banco:', e.message || e);
     return [];
   }
 }
 
-function unirProdutosLocaisEBanco(produtosLocais, produtosBanco){
-  const mapa = new Map();
+async function obterProdutosEmpresaCompleta(empresa){
+  const locais = obterProdutosLocaisEmpresa(empresa);
+  const banco = await obterProdutosBanco();
 
-  (produtosLocais || []).forEach(function(p){
-    const chave = String(p.codigo || p._uid || p.id).toLowerCase();
-    if(chave){
-      mapa.set(chave, p);
+  const vistos = {};
+  const resultado = [];
+
+  locais.concat(banco).forEach(function(p){
+    const chave = String(p._uid || p.id);
+    if(!vistos[chave]){
+      vistos[chave] = true;
+      resultado.push(p);
     }
   });
 
-  // Produto do banco tem prioridade. Assim, se você editar um produto fixo e salvar,
-  // a versão persistida aparece no lugar da fixa.
-  (produtosBanco || []).forEach(function(p){
-    const chave = String(p.codigo || p._uid || p.id).toLowerCase();
-    if(chave){
-      mapa.set(chave, p);
-    }
-  });
-
-  return Array.from(mapa.values());
+  return resultado;
 }
 
-async function obterProdutosDaEmpresaAtual(){
-  const locais = produtosBaseDaEmpresaAtual();
-  const banco = await produtosPersistidosDoBanco();
-  return unirProdutosLocaisEBanco(locais, banco);
+function refProduto(p){
+  return String(p && p._uid ? p._uid : ('api:' + (p ? p.id : '')));
+}
+
+function encontrarProdutoCache(ref){
+  const chave = String(ref);
+  return (produtosCache || []).find(function(p){
+    return String(p._uid || ('api:' + p.id)) === chave || String(p.id) === chave;
+  });
 }
 
 function botoesProdutoHtml(p){
-  const uid = escapeJsProduto(produtoUid(p));
+  const ref = escapeJsProduto(refProduto(p));
 
-  return '<div class="action-btns">' +
-    '<button class="btn btn-primary btn-sm" onclick="editarProduto(\'' + uid + '\')">Editar</button>' +
-    '<button class="btn btn-danger btn-sm" onclick="removerProduto(\'' + uid + '\')">Remover</button>' +
-  '</div>';
+  return '<button type="button" class="btn btn-primary btn-sm" onclick="editarProduto(\'' + ref + '\')">Editar</button> ' +
+         '<button type="button" class="btn btn-danger btn-sm" onclick="removerProduto(\'' + ref + '\')">Remover</button>';
 }
 
 function linhaProdutoHtml(p){
@@ -6851,23 +6823,14 @@ function linhaProdutoHtml(p){
   '</tr>';
 }
 
-function produtoDoCachePorUid(uid){
-  const valor = String(uid || '');
-
-  return (produtosCache || []).find(function(p){
-    return String(p._uid || '') === valor || String(p.id) === valor;
-  });
-}
-
-
-
 async function carregarProdutos(){
   const pageTaisAtiva = document.getElementById('page-produtos-tais') &&
-    document.getElementById('page-produtos-tais').classList.contains('active');
+                        document.getElementById('page-produtos-tais').classList.contains('active');
 
   const buscaId = pageTaisAtiva ? 'busca-produtos-tais' : 'busca-produtos';
   const tabelaId = pageTaisAtiva ? 'tabela-produtos-tais' : 'tabela-produtos';
 
+  const contextoEmpresa = empresaAtual;
   const busca = (document.getElementById(buscaId) && document.getElementById(buscaId).value || '').toLowerCase();
   const tbody = document.getElementById(tabelaId);
   const titulo = document.getElementById('titulo-produtos');
@@ -6877,7 +6840,17 @@ async function carregarProdutos(){
   }
 
   try{
-    let lista = await obterProdutosDaEmpresaAtual();
+    if(contextoEmpresa === 'acp'){
+      if(titulo) titulo.textContent = 'Produtos - ACP Indústria de Móveis';
+    }else if(contextoEmpresa === 'sleep'){
+      if(titulo) titulo.textContent = 'Produtos - Sleep Colchões';
+    }else if(contextoEmpresa === 'tais'){
+      if(titulo) titulo.textContent = 'Produtos - Taís Móveis';
+    }else{
+      if(titulo) titulo.textContent = 'Produtos';
+    }
+
+    let lista = await obterProdutosEmpresaCompleta(contextoEmpresa);
 
     if(busca){
       lista = lista.filter(function(p){
@@ -6893,100 +6866,73 @@ async function carregarProdutos(){
       return;
     }
 
-    if(empresaAtual === 'acp' || empresaAtual === 'tais'){
-      if(titulo){
-        titulo.textContent = empresaAtual === 'acp'
-          ? 'Produtos - ACP Indústria de Móveis'
-          : 'Produtos - Taís Móveis';
-      }
-
+    if(contextoEmpresa === 'acp' || contextoEmpresa === 'tais'){
       const gruposPorColecao = {};
 
       lista.forEach(function(p){
         const key = (p.colecao_id === undefined || p.colecao_id === null || p.colecao_id === '') ? 0 : parseInt(p.colecao_id);
-        if(!gruposPorColecao[key]){
-          gruposPorColecao[key] = [];
-        }
+        if(!gruposPorColecao[key]) gruposPorColecao[key] = [];
         gruposPorColecao[key].push(p);
       });
 
-      const colecoes = empresaAtual === 'acp' ? DB_ACP.colecoes : DB_TAIS.colecoes;
-      const cor = empresaAtual === 'acp' ? '#1e9fd4' : '#2e7d32';
+      const idsOrdenados = Object.keys(gruposPorColecao)
+        .map(function(k){ return parseInt(k); })
+        .sort(function(a,b){ return a-b; });
 
       let html = '';
 
-      Object.keys(gruposPorColecao)
-        .map(function(k){ return parseInt(k); })
-        .sort(function(a,b){ return a - b; })
-        .forEach(function(colId){
-          const itens = gruposPorColecao[colId];
-          const col = (colecoes || []).find(function(c){ return c.id === colId; });
-          const nomeColecao = col ? (' — ' + col.nome) : '';
+      idsOrdenados.forEach(function(colId){
+        const itens = gruposPorColecao[colId];
+        if(!itens || !itens.length) return;
 
-          html += '<tr style="background:#e8f4fd">' +
-            '<td colspan="7" style="font-weight:700;font-size:12px;padding:8px 12px;color:' + cor + '">' +
-            '📦 COLEÇÃO ' + colId + escapeHtmlProduto(nomeColecao) +
-            '</td></tr>';
+        const colecoes = contextoEmpresa === 'tais' ? DB_TAIS.colecoes : DB_ACP.colecoes;
+        const col = colecoes.find(function(c){ return c.id === colId; });
+        const nomeColecao = col ? (' — ' + col.nome) : '';
+        const cor = contextoEmpresa === 'tais' ? '#2e7d32' : '#1e9fd4';
 
-          itens.forEach(function(p){
-            html += linhaProdutoHtml(p);
-          });
+        html += '<tr style="background:#e8f4fd">' +
+          '<td colspan="7" style="font-weight:700;font-size:12px;padding:8px 12px;color:' + cor + '">' +
+          '📦 COLEÇÃO ' + colId + escapeHtmlProduto(nomeColecao) +
+          '</td></tr>';
+
+        itens.forEach(function(p){
+          html += linhaProdutoHtml(p);
         });
+      });
 
       tbody.innerHTML = html;
       return;
     }
 
-    if(empresaAtual === 'sleep'){
-      if(titulo){
-        titulo.textContent = 'Produtos - Sleep Colchões';
-      }
-
-      tbody.innerHTML = lista.map(function(p){
-        return linhaProdutoHtml(p);
-      }).join('');
-
-      return;
-    }
-
-    if(titulo){
-      titulo.textContent = 'Produtos';
-    }
-
     tbody.innerHTML = lista.map(function(p){
       return linhaProdutoHtml(p);
     }).join('');
+
   }catch(e){
     console.error('Erro ao carregar produtos:', e);
-    toast('Erro ao carregar produtos', 'error');
+    toast('Erro ao carregar produtos','error');
   }
 }
 
-
-
 function abrirModalProduto(){
-  document.getElementById('modal-produto-titulo').textContent = 'Novo Produto';
-  document.getElementById('produto-id').value = '';
-
-  ['p-codigo','p-descricao','p-preco','p-estoque'].forEach(function(id){
-    document.getElementById(id).value = '';
-  });
-
-  document.getElementById('p-unidade').value = 'UN';
-  document.getElementById('p-colecao').value = '0';
+  document.getElementById('modal-produto-titulo').textContent='Novo Produto';
+  document.getElementById('produto-id').value='';
+  ['p-codigo','p-descricao','p-preco','p-estoque'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('p-unidade').value='UN';
+  document.getElementById('p-colecao').value='0';
   abrirModal('modal-produto');
 }
 
-async function editarProduto(uid){
-  const p = produtoDoCachePorUid(uid);
+async function editarProduto(ref){
+  const p = encontrarProdutoCache(ref);
 
   if(!p){
-    toast('Produto não encontrado para edição', 'error');
+    toast('Produto não encontrado','error');
     return;
   }
 
   document.getElementById('modal-produto-titulo').textContent = 'Editar Produto';
-  document.getElementById('produto-id').value = produtoUid(p);
+  document.getElementById('produto-id').value = refProduto(p);
   document.getElementById('p-codigo').value = p.codigo || '';
   document.getElementById('p-descricao').value = p.descricao || '';
   document.getElementById('p-unidade').value = p.unidade || 'UN';
@@ -6998,18 +6944,11 @@ async function editarProduto(uid){
 }
 
 async function salvarProduto(){
-  const uid = document.getElementById('produto-id').value;
-  const codigo = document.getElementById('p-codigo').value.trim();
-  const descricao = document.getElementById('p-descricao').value.trim();
-
-  if(!codigo || !descricao){
-    toast('Código e descrição são obrigatórios', 'error');
-    return;
-  }
+  const id = document.getElementById('produto-id').value;
 
   const dados = {
-    codigo: codigo,
-    descricao: descricao,
+    codigo: document.getElementById('p-codigo').value.trim(),
+    descricao: document.getElementById('p-descricao').value.trim(),
     unidade: document.getElementById('p-unidade').value.trim() || 'UN',
     preco_venda: parseFloat(document.getElementById('p-preco').value) || 0,
     estoque: parseFloat(document.getElementById('p-estoque').value) || 0,
@@ -7017,38 +6956,52 @@ async function salvarProduto(){
     empresa: empresaAtual
   };
 
+  if(!dados.codigo || !dados.descricao){
+    toast('Código e descrição são obrigatórios','error');
+    return;
+  }
+
   try{
-    const produtoAtual = produtoDoCachePorUid(uid);
-    let apiId = '';
-
-    if(String(uid || '').startsWith('api:')){
-      apiId = String(uid).split(':')[1];
-    }else if(produtoAtual && produtoAtual._persistido){
-      apiId = produtoAtual.id;
-    }else{
-      const existenteNoBanco = (produtosCache || []).find(function(p){
-        return p._persistido && String(p.codigo || '').toLowerCase() === codigo.toLowerCase();
-      });
-
-      if(existenteNoBanco){
-        apiId = existenteNoBanco.id;
-      }
-    }
-
-    if(apiId){
+    if(id && String(id).startsWith('api:')){
+      const apiId = String(id).split(':')[1];
       await api('/api/produtos/' + apiId, 'PUT', dados);
-      toast('Produto atualizado e salvo no banco!');
+      toast('Produto atualizado no banco!');
+    }else if(id){
+      const produtoLocal = encontrarProdutoCache(id);
+
+      if(produtoLocal && produtoLocal._origem === 'local'){
+        let base = DB_ACP.produtos;
+
+        if(produtoLocal._empresa === 'sleep') base = DB_SLEEP.produtos;
+        if(produtoLocal._empresa === 'tais') base = DB_TAIS.produtos;
+
+        const idx = base.findIndex(function(p){ return String(p.id) === String(produtoLocal.id); });
+
+        if(idx !== -1){
+          base[idx] = Object.assign(base[idx], dados);
+          toast('Produto padrão atualizado nesta sessão!');
+        }
+      }else{
+        await api('/api/produtos/' + id, 'PUT', dados);
+        toast('Produto atualizado!');
+      }
     }else{
       await api('/api/produtos', 'POST', dados);
-      toast('Produto cadastrado e salvo no banco!');
+      toast('Produto cadastrado no banco!');
     }
 
     fecharModal('modal-produto');
-    await carregarProdutos();
+
+    if(document.getElementById('page-produtos') && !document.getElementById('page-produtos').classList.contains('active')){
+      showPage('produtos','Novo Produto/Consultar Produto');
+    }else{
+      carregarProdutos();
+    }
+
     atualizarDashboardSeVisivel();
   }catch(e){
     console.error('Erro ao salvar produto:', e);
-    toast(e.message || 'Erro ao salvar produto no banco', 'error');
+    toast(e.message || 'Erro ao salvar produto','error');
   }
 }
 
@@ -7177,43 +7130,43 @@ let pedidoEditandoId = null;
 async function abrirModalPedido(){
   pedidoEditandoId = null;
 
-if(document.getElementById('modal-pedido-titulo')){
-  document.getElementById('modal-pedido-titulo').textContent = 'Novo Pedido';
-}
+  if(document.getElementById('modal-pedido-titulo')){
+    document.getElementById('modal-pedido-titulo').textContent = 'Novo Pedido';
+  }
 
-if(document.getElementById('btn-salvar-pedido')){
-  document.getElementById('btn-salvar-pedido').textContent = 'Criar Pedido';
-}
+  if(document.getElementById('btn-salvar-pedido')){
+    document.getElementById('btn-salvar-pedido').textContent = 'Criar Pedido';
+  }
+
   try{
-    await carregarProdutosDaEmpresaAtual();
+    produtosCache = await obterProdutosEmpresaCompleta(empresaAtual);
 
-   clientesPedidoCache = await api('/api/clientes?empresa='+encodeURIComponent(empresaAtual));
+    clientesPedidoCache = await api('/api/clientes?empresa=' + encodeURIComponent(empresaAtual));
 
-const campoBuscaCliente = document.getElementById('busca-cliente-pedido');
-if(campoBuscaCliente){
-  campoBuscaCliente.value = '';
-}
+    const campoBuscaCliente = document.getElementById('busca-cliente-pedido');
+    if(campoBuscaCliente){
+      campoBuscaCliente.value = '';
+    }
 
-filtrarClientesPedido();
+    filtrarClientesPedido();
 
     const grupoCor = document.getElementById('grupo-cor-pedido');
-const selCor = document.getElementById('ped-cor');
+    const selCor = document.getElementById('ped-cor');
 
-if(grupoCor && selCor){
-  grupoCor.style.display = 'none';
-  selCor.innerHTML = '<option value="">Selecione a cor...</option>';
-  selCor.value = '';
-}
+    if(grupoCor && selCor){
+      grupoCor.style.display = 'none';
+      selCor.innerHTML = '<option value="">Selecione a cor...</option>';
+      selCor.value = '';
+    }
 
-    document.getElementById('tabela-itens').innerHTML='';
-document.getElementById('ped-obs').value='';
-document.getElementById('ped-entrega').value='';
-document.getElementById('total-pedido').textContent='0,00';
+    document.getElementById('tabela-itens').innerHTML = '';
+    document.getElementById('ped-obs').value = '';
+    document.getElementById('ped-entrega').value = '';
+    document.getElementById('total-pedido').textContent = '0,00';
 
-abrirModal('modal-pedido');
+    abrirModal('modal-pedido');
 
-// Já abre com uma linha de produto
-adicionarItem();
+    adicionarItem();
   }catch(e){
     console.error('Erro ao abrir novo pedido:', e);
     toast('Erro ao abrir novo pedido','error');
@@ -7520,11 +7473,21 @@ function calcularTotalPedido(){
   }
   document.getElementById('total-pedido').textContent=formatMoeda(total);
 }
+function carregarProdutosDaEmpresaAtual(){
+  produtosCache = [];
 
-async function carregarProdutosDaEmpresaAtual(){
-  produtosCache = await obterProdutosDaEmpresaAtual();
+  if(empresaAtual === 'acp'){
+    produtosCache = DB_ACP.produtos.filter(function(p){
+      return p.descricao !== '';
+    });
+  }else if(empresaAtual === 'sleep'){
+    produtosCache = DB_SLEEP.produtos;
+  }else if(empresaAtual === 'tais'){
+    produtosCache = DB_TAIS.produtos;
+  }else{
+    produtosCache = [];
+  }
 }
-
 
 function preencherItemPedidoEditado(item){
   const tbody = document.getElementById('tabela-itens');
@@ -7574,7 +7537,7 @@ async function abrirModalEditarPedido(id){
   try{
     pedidoEditandoId = id;
 
-    await carregarProdutosDaEmpresaAtual();
+    carregarProdutosDaEmpresaAtual();
 
     clientesPedidoCache = await api('/api/clientes?empresa=' + encodeURIComponent(empresaAtual));
 
@@ -7916,24 +7879,19 @@ async function relatorioClientes(){
   document.getElementById('relatorio-resultado').innerHTML='<div class="card"><strong style="font-size:14px">Clientes por Cidade</strong><table style="margin-top:12px"><thead><tr><th>Cidade/UF</th><th>Quantidade</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
-async 
 async function relatorioProdutos(){
   try{
-    const produtos = await api('/api/produtos');
+    const produtos = await obterProdutosEmpresaCompleta(empresaAtual);
     let rows = '';
 
     produtos.forEach(function(p){
-      const uid = 'api:' + p.id;
-
       rows += '<tr>' +
         '<td><code>' + escapeHtmlProduto(p.codigo) + '</code></td>' +
         '<td>' + escapeHtmlProduto(p.descricao) + '</td>' +
         '<td>' + escapeHtmlProduto(p.unidade || 'UN') + '</td>' +
         '<td style="color:' + (Number(p.estoque || 0) < 5 ? '#f44336' : '#388e3c') + ';font-weight:600">' + escapeHtmlProduto(p.estoque || 0) + '</td>' +
         '<td>R$ ' + formatMoeda(p.preco_venda) + '</td>' +
-        '<td>' +
-          '<button type="button" onclick="removerProduto(\'' + uid + '\')" class="btn btn-danger btn-sm">Remover</button>' +
-        '</td>' +
+        '<td>' + botoesProdutoHtml(p) + '</td>' +
       '</tr>';
     });
 
@@ -7955,11 +7913,10 @@ async function relatorioProdutos(){
         '</table>' +
       '</div>';
   }catch(e){
-    console.error('Erro ao gerar relatório de produtos:', e);
-    toast('Erro ao gerar relatório de produtos', 'error');
+    console.error('Erro no relatório de produtos:', e);
+    toast('Erro ao carregar relatório de produtos','error');
   }
 }
-
 
 function normalizarEmpresaFront(sigla){
   const e = String(sigla || 'acp')
@@ -7992,13 +7949,7 @@ function atualizarMenuProdutos() {
 }
 
 function abrirProdutosEmpresa(){
-  if(empresaAtual==='sleep'){
-    showPage('tabela-sleep','Novo Produto/Consultar Produto');
-  } else if(empresaAtual==='tais'){
-    showPage('produtos','Novo Produto/Consultar Produto');
-  } else {
-    showPage('produtos','Novo Produto/Consultar Produto');
-  }
+  showPage('produtos','Novo Produto/Consultar Produto');
 }
 
 function aplicarDescontoSleep(){
@@ -8039,23 +7990,30 @@ function carregarProdutosTais() {
 }
 
 async function abrirModalAssistencia(){
-  await carregarProdutosDaEmpresaAtual();
+  try{
+    produtosCache = await obterProdutosEmpresaCompleta(empresaAtual);
 
-  const clientes=await api('/api/clientes?empresa='+encodeURIComponent(empresaAtual));
-  const sel=document.getElementById('ass-cliente');
-  sel.innerHTML='<option value="">Selecione o cliente...</option>'+
-    clientes.map(function(c){
-      return '<option value="'+c.id+'">'+c.razao_social+'</option>';
-    }).join('');
+    const clientes = await api('/api/clientes?empresa=' + encodeURIComponent(empresaAtual));
+    const sel = document.getElementById('ass-cliente');
 
-  document.getElementById('tabela-itens-ass').innerHTML='';
-  document.getElementById('ass-obs').value='';
-  document.getElementById('ass-motivo').value='';
-  document.getElementById('ass-fabricacao').value='';
-  assistenciaAnexoAtual=null;
-  document.getElementById('ass-anexo').value='';
-  document.getElementById('ass-anexo-preview').innerHTML='<span class="anexo-vazio">Nenhum arquivo selecionado.</span>';
-  abrirModal('modal-assistencia');
+    sel.innerHTML = '<option value="">Selecione o cliente...</option>' +
+      clientes.map(function(c){
+        return '<option value="' + c.id + '">' + escapeHtmlProduto(c.razao_social) + '</option>';
+      }).join('');
+
+    document.getElementById('tabela-itens-ass').innerHTML = '';
+    document.getElementById('ass-obs').value = '';
+    document.getElementById('ass-motivo').value = '';
+    document.getElementById('ass-fabricacao').value = '';
+    assistenciaAnexoAtual = null;
+    document.getElementById('ass-anexo').value = '';
+    document.getElementById('ass-anexo-preview').innerHTML = '<span class="anexo-vazio">Nenhum arquivo selecionado.</span>';
+
+    abrirModal('modal-assistencia');
+  }catch(e){
+    console.error('Erro ao abrir assistência:', e);
+    toast('Erro ao abrir assistência','error');
+  }
 }
 
 async function handleAnexoAssistencia(event){
@@ -8347,6 +8305,45 @@ async function removerAssistencia(id, numero){
   }
 }
 
+async function removerProduto(ref){
+  const produto = encontrarProdutoCache(ref);
+
+  if(!produto){
+    toast('Produto não encontrado','error');
+    return;
+  }
+
+  if(!confirm('Tem certeza que deseja remover este produto?')){
+    return;
+  }
+
+  try{
+    if(produto._origem === 'api' || String(ref).startsWith('api:')){
+      const apiId = String(ref).startsWith('api:') ? String(ref).split(':')[1] : produto.id;
+      await api('/api/produtos/' + apiId, 'DELETE');
+      toast('Produto removido do banco!');
+    }else{
+      let base = DB_ACP.produtos;
+
+      if(produto._empresa === 'sleep') base = DB_SLEEP.produtos;
+      if(produto._empresa === 'tais') base = DB_TAIS.produtos;
+
+      const idx = base.findIndex(function(p){ return String(p.id) === String(produto.id); });
+
+      if(idx !== -1){
+        base.splice(idx, 1);
+      }
+
+      toast('Produto padrão removido apenas desta sessão.');
+    }
+
+    await carregarProdutos();
+  }catch(e){
+    console.error('Erro ao remover produto:', e);
+    toast(e.message || 'Erro ao remover produto','error');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function(){
   const btnLogin = document.getElementById('btn-login');
   const inputSenha = document.getElementById('login-senha');
@@ -8365,42 +8362,6 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 });
-
-async function removerProduto(uid){
-  const produto = produtoDoCachePorUid(uid);
-  let apiId = '';
-
-  if(String(uid || '').startsWith('api:')){
-    apiId = String(uid).split(':')[1];
-  }else if(produto && produto._persistido){
-    apiId = produto.id;
-  }
-
-  if(!produto && !apiId){
-    toast('Produto não encontrado', 'error');
-    return;
-  }
-
-  const nome = produto ? (produto.codigo + ' - ' + produto.descricao) : 'este produto';
-
-  if(!confirm('Tem certeza que deseja remover ' + nome + '?')){
-    return;
-  }
-
-  if(!apiId){
-    toast('Este produto é fixo da tabela original. Para remover definitivamente, ele precisa estar salvo no banco.', 'error');
-    return;
-  }
-
-  try{
-    await api('/api/produtos/' + apiId, 'DELETE');
-    toast('Produto removido com sucesso!');
-    await carregarProdutos();
-  }catch(e){
-    console.error('Erro ao remover produto:', e);
-    toast(e.message || 'Erro ao remover produto', 'error');
-  }
-}
 
 
 </script>
