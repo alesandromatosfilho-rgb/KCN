@@ -7183,15 +7183,20 @@ function normalizarTextoBuscaProduto(valor){
 }
 
 function filtrarProdutosItem(idx, abrirLista){
-  const campo = document.getElementById('item-produto-busca-'+idx);
-  const hidden = document.getElementById('item-produto-'+idx);
-  const listaEl = document.getElementById('lista-produtos-'+idx);
+  const campo = document.getElementById('item-produto-busca-' + idx);
+  const hidden = document.getElementById('item-produto-' + idx);
+  const listaEl = document.getElementById('lista-produtos-' + idx);
 
   if(!campo || !hidden || !listaEl){
     return;
   }
 
   hidden.value = '';
+  hidden.dataset.codigo = '';
+  hidden.dataset.descricao = '';
+  hidden.dataset.preco = '';
+  hidden.dataset.origem = '';
+  hidden.dataset.idReal = '';
 
   const busca = normalizarTextoBuscaProduto(campo.value);
 
@@ -7203,28 +7208,28 @@ function filtrarProdutosItem(idx, abrirLista){
         p.codigo || '',
         p.descricao || '',
         p.colecao || '',
-        p.unidade || ''
+        p.unidade || '',
+        p.colecao_id || ''
       ].join(' '));
 
       return texto.includes(busca);
     });
   }
 
-  // NÃO limita mais em 80 produtos
-  //lista = lista.slice(0, 500);
+  lista = lista.slice(0, 500);
 
   if(!lista.length){
     listaEl.innerHTML = '<div class="produto-search-empty">Nenhum produto encontrado</div>';
   }else{
     listaEl.innerHTML = lista.map(function(p){
-      const id = p.id;
-      const codigo = String(p.codigo || '').replace(/'/g, '&#39;');
-      const descricao = String(p.descricao || '').replace(/'/g, '&#39;');
+      const ref = escapeJsProduto(refProduto(p));
+      const codigo = escapeHtmlProduto(p.codigo || '');
+      const descricao = escapeHtmlProduto(p.descricao || '');
       const preco = Number(p.preco_venda || 0);
 
-      return '<div class="produto-search-item" onclick="selecionarProdutoItem('+idx+', '+id+', \''+codigo+'\', \''+descricao+'\', '+preco+')">'+
-               '<strong>'+codigo+' - '+descricao+'</strong>'+
-               '<small>Preço: R$ '+formatMoeda(preco)+'</small>'+
+      return '<div class="produto-search-item" onclick="selecionarProdutoItem(' + idx + ', \'' + ref + '\')">' +
+               '<strong>' + codigo + ' - ' + descricao + '</strong>' +
+               '<small>Preço: R$ ' + formatMoeda(preco) + '</small>' +
              '</div>';
     }).join('');
   }
@@ -7233,21 +7238,35 @@ function filtrarProdutosItem(idx, abrirLista){
     listaEl.classList.add('open');
   }
 }
-function selecionarProdutoItem(idx, id, codigo, descricao, preco){
-  const hidden = document.getElementById('item-produto-'+idx);
-  const campo = document.getElementById('item-produto-busca-'+idx);
-  const lista = document.getElementById('lista-produtos-'+idx);
-  const precoEl = document.getElementById('item-preco-'+idx);
+
+function selecionarProdutoItem(idx, ref){
+  const produto = encontrarProdutoCache(ref);
+
+  if(!produto){
+    toast('Produto não encontrado. Atualize a página e tente novamente.','error');
+    return;
+  }
+
+  const hidden = document.getElementById('item-produto-' + idx);
+  const campo = document.getElementById('item-produto-busca-' + idx);
+  const lista = document.getElementById('lista-produtos-' + idx);
+  const precoEl = document.getElementById('item-preco-' + idx);
+
+  const codigo = produto.codigo || '';
+  const descricao = produto.descricao || '';
+  const preco = Number(produto.preco_venda || 0);
 
   if(hidden){
-    hidden.value = id;
+    hidden.value = refProduto(produto);
     hidden.dataset.codigo = codigo;
     hidden.dataset.descricao = descricao;
     hidden.dataset.preco = preco;
+    hidden.dataset.origem = produto._origem || '';
+    hidden.dataset.idReal = produto._origem === 'api' ? String(produto.id || '') : '';
   }
 
   if(campo){
-    campo.value = codigo+' - '+descricao;
+    campo.value = codigo + ' - ' + descricao;
   }
 
   if(precoEl){
@@ -7260,6 +7279,7 @@ function selecionarProdutoItem(idx, id, codigo, descricao, preco){
 
   calcularTotalItem(idx);
 }
+
 document.addEventListener('click', function(e){
   document.querySelectorAll('.produto-search-wrap').forEach(function(wrap){
     if(!wrap.contains(e.target)){
@@ -7279,15 +7299,20 @@ function normalizarTextoBuscaProduto(valor){
 }
 
 function filtrarProdutosItem(idx, abrirLista){
-  const campo = document.getElementById('item-produto-busca-'+idx);
-  const hidden = document.getElementById('item-produto-'+idx);
-  const listaEl = document.getElementById('lista-produtos-'+idx);
+  const campo = document.getElementById('item-produto-busca-' + idx);
+  const hidden = document.getElementById('item-produto-' + idx);
+  const listaEl = document.getElementById('lista-produtos-' + idx);
 
   if(!campo || !hidden || !listaEl){
     return;
   }
 
   hidden.value = '';
+  hidden.dataset.codigo = '';
+  hidden.dataset.descricao = '';
+  hidden.dataset.preco = '';
+  hidden.dataset.origem = '';
+  hidden.dataset.idReal = '';
 
   const busca = normalizarTextoBuscaProduto(campo.value);
 
@@ -7299,7 +7324,8 @@ function filtrarProdutosItem(idx, abrirLista){
         p.codigo || '',
         p.descricao || '',
         p.colecao || '',
-        p.unidade || ''
+        p.unidade || '',
+        p.colecao_id || ''
       ].join(' '));
 
       return texto.includes(busca);
@@ -7312,14 +7338,14 @@ function filtrarProdutosItem(idx, abrirLista){
     listaEl.innerHTML = '<div class="produto-search-empty">Nenhum produto encontrado</div>';
   }else{
     listaEl.innerHTML = lista.map(function(p){
-      const id = p.id;
-      const codigo = String(p.codigo || '').replace(/'/g, '&#39;');
-      const descricao = String(p.descricao || '').replace(/'/g, '&#39;');
+      const ref = escapeJsProduto(refProduto(p));
+      const codigo = escapeHtmlProduto(p.codigo || '');
+      const descricao = escapeHtmlProduto(p.descricao || '');
       const preco = Number(p.preco_venda || 0);
 
-      return '<div class="produto-search-item" onclick="selecionarProdutoItem('+idx+', '+id+', \''+codigo+'\', \''+descricao+'\', '+preco+')">'+
-               '<strong>'+codigo+' - '+descricao+'</strong>'+
-               '<small>Preço: R$ '+formatMoeda(preco)+'</small>'+
+      return '<div class="produto-search-item" onclick="selecionarProdutoItem(' + idx + ', \'' + ref + '\')">' +
+               '<strong>' + codigo + ' - ' + descricao + '</strong>' +
+               '<small>Preço: R$ ' + formatMoeda(preco) + '</small>' +
              '</div>';
     }).join('');
   }
@@ -7329,21 +7355,34 @@ function filtrarProdutosItem(idx, abrirLista){
   }
 }
 
-function selecionarProdutoItem(idx, id, codigo, descricao, preco){
-  const hidden = document.getElementById('item-produto-'+idx);
-  const campo = document.getElementById('item-produto-busca-'+idx);
-  const lista = document.getElementById('lista-produtos-'+idx);
-  const precoEl = document.getElementById('item-preco-'+idx);
+function selecionarProdutoItem(idx, ref){
+  const produto = encontrarProdutoCache(ref);
+
+  if(!produto){
+    toast('Produto não encontrado. Atualize a página e tente novamente.','error');
+    return;
+  }
+
+  const hidden = document.getElementById('item-produto-' + idx);
+  const campo = document.getElementById('item-produto-busca-' + idx);
+  const lista = document.getElementById('lista-produtos-' + idx);
+  const precoEl = document.getElementById('item-preco-' + idx);
+
+  const codigo = produto.codigo || '';
+  const descricao = produto.descricao || '';
+  const preco = Number(produto.preco_venda || 0);
 
   if(hidden){
-    hidden.value = id;
+    hidden.value = refProduto(produto);
     hidden.dataset.codigo = codigo;
     hidden.dataset.descricao = descricao;
     hidden.dataset.preco = preco;
+    hidden.dataset.origem = produto._origem || '';
+    hidden.dataset.idReal = produto._origem === 'api' ? String(produto.id || '') : '';
   }
 
   if(campo){
-    campo.value = codigo+' - '+descricao;
+    campo.value = codigo + ' - ' + descricao;
   }
 
   if(precoEl){
@@ -7474,20 +7513,8 @@ function calcularTotalPedido(){
   }
   document.getElementById('total-pedido').textContent=formatMoeda(total);
 }
-function carregarProdutosDaEmpresaAtual(){
-  produtosCache = [];
-
-  if(empresaAtual === 'acp'){
-    produtosCache = DB_ACP.produtos.filter(function(p){
-      return p.descricao !== '';
-    });
-  }else if(empresaAtual === 'sleep'){
-    produtosCache = DB_SLEEP.produtos;
-  }else if(empresaAtual === 'tais'){
-    produtosCache = DB_TAIS.produtos;
-  }else{
-    produtosCache = [];
-  }
+async function carregarProdutosDaEmpresaAtual(){
+  produtosCache = await obterProdutosEmpresaCompleta(empresaAtual);
 }
 
 function preencherItemPedidoEditado(item){
@@ -7538,7 +7565,7 @@ async function abrirModalEditarPedido(id){
   try{
     pedidoEditandoId = id;
 
-    carregarProdutosDaEmpresaAtual();
+    await carregarProdutosDaEmpresaAtual();
 
     clientesPedidoCache = await api('/api/clientes?empresa=' + encodeURIComponent(empresaAtual));
 
@@ -7693,8 +7720,19 @@ async function salvarPedido(){
       produtoNome = produtoNome || partesProduto.slice(1).join(' - ') || textoProduto;
     }
 
+    let produtoIdParaBanco = 0;
+    const refProdutoSelecionado = String(produtoEl.value || '');
+
+    if(produtoEl.dataset.idReal){
+      produtoIdParaBanco = Number(produtoEl.dataset.idReal || 0);
+    }else if(refProdutoSelecionado.indexOf('api:') === 0){
+      produtoIdParaBanco = Number(refProdutoSelecionado.replace('api:', '') || 0);
+    }else if(/^\d+$/.test(refProdutoSelecionado)){
+      produtoIdParaBanco = Number(refProdutoSelecionado);
+    }
+
     itens.push({
-      produto_id: produtoEl.value,
+      produto_id: produtoIdParaBanco || 0,
       produto_codigo: produtoCodigo,
       produto_nome: produtoNome,
       cor_item: corItem,
