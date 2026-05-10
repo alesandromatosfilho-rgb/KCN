@@ -49,6 +49,16 @@ function normalizarEmpresa(empresa) {
   return 'acp';
 }
 
+
+async function garantirColunasProdutos() {
+  try {
+    await run("ALTER TABLE produtos ADD COLUMN IF NOT EXISTS colecao_id INTEGER DEFAULT 0");
+    await run("ALTER TABLE produtos ADD COLUMN IF NOT EXISTS empresa TEXT DEFAULT 'acp'");
+  } catch (e) {
+    console.warn('Aviso ao garantir colunas de produtos:', e.message);
+  }
+}
+
 function auth(req, res, next) {
   const token = req.headers['authorization']?.split(' ')[1];
 
@@ -435,16 +445,26 @@ app.delete('/api/clientes/:id', auth, async (req, res) => {
 
 app.get('/api/produtos', auth, async (req, res) => {
   const busca = req.query.busca ? `%${req.query.busca}%` : '%';
+  const empresa = req.query.empresa ? normalizarEmpresa(req.query.empresa) : null;
 
   try {
-    const rows = await query(
-      `SELECT * 
-       FROM produtos 
-       WHERE status = 'ativo'
-       AND (descricao LIKE ? OR codigo LIKE ?)
-       ORDER BY descricao`,
-      [busca, busca]
-    );
+    let sql = `
+      SELECT * 
+      FROM produtos 
+      WHERE status = 'ativo'
+      AND (descricao LIKE ? OR codigo LIKE ?)
+    `;
+
+    const params = [busca, busca];
+
+    if (empresa) {
+      sql += ' AND empresa = ?';
+      params.push(empresa);
+    }
+
+    sql += ' ORDER BY colecao_id, descricao';
+
+    const rows = await query(sql, params);
 
     res.json(rows);
   } catch (e) {
@@ -453,7 +473,7 @@ app.get('/api/produtos', auth, async (req, res) => {
 });
 
 app.post('/api/produtos', auth, async (req, res) => {
-  const { codigo, descricao, unidade, preco_venda, estoque } = req.body;
+  const { codigo, descricao, unidade, preco_venda, estoque, colecao_id, empresa } = req.body;
 
   if (!codigo || !descricao) {
     return res.status(400).json({ erro: 'Código e descrição são obrigatórios' });
@@ -462,15 +482,17 @@ app.post('/api/produtos', auth, async (req, res) => {
   try {
     const r = await run(
       `INSERT INTO produtos 
-      (codigo, descricao, unidade, preco_venda, estoque, status) 
-      VALUES (?,?,?,?,?,?)`,
+      (codigo, descricao, unidade, preco_venda, estoque, status, colecao_id, empresa) 
+      VALUES (?,?,?,?,?,?,?,?)`,
       [
         codigo,
         descricao,
         unidade || 'UN',
         Number(preco_venda || 0),
         Number(estoque || 0),
-        'ativo'
+        'ativo',
+        Number(colecao_id || 0),
+        normalizarEmpresa(empresa)
       ]
     );
 
@@ -479,12 +501,12 @@ app.post('/api/produtos', auth, async (req, res) => {
       mensagem: 'Produto cadastrado com sucesso'
     });
   } catch (e) {
-    res.status(400).json({ erro: 'Código já existe ou dados inválidos' });
+    res.status(400).json({ erro: 'Código já existe ou dados inválidos: ' + e.message });
   }
 });
 
 app.put('/api/produtos/:id', auth, async (req, res) => {
-  const { codigo, descricao, unidade, preco_venda, estoque } = req.body;
+  const { codigo, descricao, unidade, preco_venda, estoque, colecao_id, empresa } = req.body;
 
   try {
     await run(
@@ -493,7 +515,9 @@ app.put('/api/produtos/:id', auth, async (req, res) => {
            descricao = ?, 
            unidade = ?, 
            preco_venda = ?, 
-           estoque = ?
+           estoque = ?,
+           colecao_id = ?,
+           empresa = ?
        WHERE id = ?`,
       [
         codigo,
@@ -501,6 +525,8 @@ app.put('/api/produtos/:id', auth, async (req, res) => {
         unidade || 'UN',
         Number(preco_venda || 0),
         Number(estoque || 0),
+        Number(colecao_id || 0),
+        normalizarEmpresa(empresa),
         req.params.id
       ]
     );
@@ -1069,9 +1095,11 @@ app.use('/api', (req, res) => {
 
 // ─── START ───────────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
-  console.log(`\n✅ ERP rodando em http://localhost:${PORT}`);
-  console.log('Banco de dados: PostgreSQL');
-  console.log('Login: admin@kcnrepresentacoes.com.br');
-  console.log('Senha: configurada no banco/PostgreSQL\n');
+garantirColunasProdutos().then(() => {
+  app.listen(PORT, () => {
+    console.log(`\n✅ ERP rodando em http://localhost:${PORT}`);
+    console.log('Banco de dados: PostgreSQL');
+    console.log('Login: admin@kcnrepresentacoes.com.br');
+    console.log('Senha: configurada no banco/PostgreSQL\n');
+  });
 });

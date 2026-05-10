@@ -6758,14 +6758,15 @@ function normalizarProdutoBanco(p){
   copia.estoque = Number(copia.estoque || 0);
   copia.preco_venda = Number(copia.preco_venda || 0);
   copia._origem = 'api';
-  copia._empresa = 'banco';
+  copia._empresa = copia.empresa || 'banco';
   copia._uid = 'api:' + copia.id;
   return copia;
 }
 
-async function obterProdutosBanco(){
+async function obterProdutosBanco(empresa){
   try{
-    const lista = await api('/api/produtos');
+    const sufixoEmpresa = empresa ? '?empresa=' + encodeURIComponent(empresa) : '';
+    const lista = await api('/api/produtos' + sufixoEmpresa);
     return (lista || []).map(normalizarProdutoBanco);
   }catch(e){
     console.warn('Não foi possível carregar produtos do banco:', e.message || e);
@@ -6775,7 +6776,7 @@ async function obterProdutosBanco(){
 
 async function obterProdutosEmpresaCompleta(empresa){
   const locais = obterProdutosLocaisEmpresa(empresa);
-  const banco = await obterProdutosBanco();
+  const banco = await obterProdutosBanco(empresa);
 
   const vistos = {};
   const resultado = [];
