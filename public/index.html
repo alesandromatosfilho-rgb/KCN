@@ -8073,11 +8073,13 @@ function adicionarItemAssistencia(){
   const tbody = document.getElementById('tabela-itens-ass');
   const idx = tbody.children.length;
 
-  const options = produtosCache.map(function(p){
-    const codigo = p.codigo || '';
-    const descricao = p.descricao || '';
+  const options = produtosCache.map(function(p, index){
+    const codigo = String(p.codigo || '');
+    const descricao = String(p.descricao || '');
 
-    return '<option value="'+p.id+'">'+codigo+' - '+descricao+'</option>';
+    return '<option value="' + index + '" data-codigo="' + escapeHtmlProduto(codigo) + '" data-descricao="' + escapeHtmlProduto(descricao) + '">' +
+      escapeHtmlProduto(codigo + ' - ' + descricao) +
+    '</option>';
   }).join('');
 
   const tr = document.createElement('tr');
@@ -8094,6 +8096,7 @@ function adicionarItemAssistencia(){
 
   tbody.appendChild(tr);
 }
+
 async function salvarAssistencia(){
   const cliente_id = document.getElementById('ass-cliente').value;
   const motivo = document.getElementById('ass-motivo').value;
@@ -8116,18 +8119,19 @@ async function salvarAssistencia(){
 
   for(let i = 0; i < rows.length; i++){
     const s = rows[i].querySelector('select');
-    const qtd = document.getElementById('ass-qtd-' + i);
+    const qtd = rows[i].querySelector('input[type="number"]');
 
-    if(!s || !s.value) continue;
+    if(!s || s.selectedIndex <= 0) continue;
 
-    const prod = produtosCache.find(function(p){
-      return p.id === parseInt(s.value);
-    });
+    const option = s.options[s.selectedIndex];
 
-    if(prod){
+    const produto_codigo = option.getAttribute('data-codigo') || '';
+    const produto_nome = option.getAttribute('data-descricao') || '';
+
+    if(produto_codigo || produto_nome){
       itens.push({
-        produto_codigo: prod.codigo || '',
-        produto_nome: prod.descricao || '',
+        produto_codigo: produto_codigo,
+        produto_nome: produto_nome,
         quantidade: qtd ? qtd.value : 1
       });
     }
