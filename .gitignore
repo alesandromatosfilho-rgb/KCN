@@ -1,0 +1,13 @@
+.env
+.env.*
+.env-backup
+.env.local-backup
+node_modules/
+.env-local-backup
+.env-backup
+erp.db
+package-backup.json
+server-postgres-final.js
+server-sqlite-antigo.js
+server-sqlite-backup.js
+teste-postgres.js
