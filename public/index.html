@@ -6754,7 +6754,10 @@ async function carregarProdutos(){
           const colecao=(p.colecao_id===undefined||p.colecao_id===null||p.colecao_id==='')?0:p.colecao_id;
           html+='<tr><td><code>'+p.codigo+'</code></td><td>'+p.descricao+'</td><td>'+colecao+'</td><td>'+p.unidade+'</td>'+
                 '<td>R$ '+formatMoeda(p.preco_venda)+'</td><td>'+p.estoque+'</td>'+
-                '<td><button class="btn btn-primary btn-sm" onclick="editarProduto('+p.id+')">Editar</button></td></tr>';
+                '<td>' +
+  '<button onclick="editarProduto(' + p.id + ')" class="btn-editar">Editar</button> ' +
+  '<button onclick="removerProduto(' + p.id + ')" class="btn-remover">Remover</button>' +
+'</td>'
         });
       });
       tbody.innerHTML=html;
@@ -8237,6 +8240,40 @@ async function removerProduto(id) {
     alert('Produto removido com sucesso!');
 
     location.reload();
+  } catch (erro) {
+    console.error('Erro ao remover produto:', erro);
+    alert('Erro ao remover produto');
+  }
+}
+async function removerProduto(id) {
+  if (!confirm('Tem certeza que deseja remover este produto?')) {
+    return;
+  }
+
+  try {
+    const resposta = await fetch('/api/produtos/' + id, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': 'Bearer ' + localStorage.getItem('token')
+      }
+    });
+
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+      alert(dados.erro || 'Erro ao remover produto');
+      return;
+    }
+
+    alert('Produto removido com sucesso!');
+
+    if (typeof carregarProdutos === 'function') {
+      carregarProdutos();
+    } else if (typeof listarProdutos === 'function') {
+      listarProdutos();
+    } else {
+      location.reload();
+    }
   } catch (erro) {
     console.error('Erro ao remover produto:', erro);
     alert('Erro ao remover produto');
