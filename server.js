@@ -511,6 +511,30 @@ app.put('/api/produtos/:id', auth, async (req, res) => {
   }
 });
 
+
+app.delete('/api/produtos/:id', auth, async (req, res) => {
+  try {
+    const produto = await get(
+      'SELECT id FROM produtos WHERE id = ?',
+      [req.params.id]
+    );
+
+    if (!produto) {
+      return res.status(404).json({ erro: 'Produto não encontrado' });
+    }
+
+    await run(
+      'UPDATE produtos SET status = ? WHERE id = ?',
+      ['inativo', req.params.id]
+    );
+
+    res.json({ mensagem: 'Produto removido com sucesso' });
+  } catch (e) {
+    console.error('Erro ao remover produto:', e.message);
+    res.status(500).json({ erro: e.message });
+  }
+});
+
 // ─── PEDIDOS ─────────────────────────────────────────────────────────────────
 
 app.get('/api/pedidos', auth, async (req, res) => {
@@ -583,8 +607,7 @@ app.post('/api/pedidos', auth, async (req, res) => {
   if (!cliente_id || !itens?.length) {
     return res.status(400).json({ erro: 'Cliente e itens são obrigatórios' });
   }
-
-  const emp = normalizarEmpresa(empresa);
+const emp = normalizarEmpresa(empresa);
 
   const total = itens.reduce((acc, item) => {
     const quantidade = Number(item.quantidade || 0);

@@ -7772,8 +7772,39 @@ async function relatorioProdutos(){
   let rows='';
   produtos.forEach(function(p){rows+='<tr><td><code>'+p.codigo+'</code></td><td>'+p.descricao+'</td><td>'+p.unidade+'</td><td style="color:'+(p.estoque<5?'#f44336':'#388e3c')+';font-weight:600">'+p.estoque+'</td><td>R$ '+formatMoeda(p.preco_venda)+'</td></tr>';});
   document.getElementById('relatorio-resultado').innerHTML='<div class="card"><strong style="font-size:14px">Posição de Estoque</strong><table style="margin-top:12px"><thead><tr><th>Código</th><th>Descrição</th><th>Unidade</th><th>Estoque</th><th>Preço</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+<button onclick="removerProduto(${produto.id})" class="btn-remover">
+  Remover
+</button>
 }
+async function removerProduto(id) {
+  const confirmar = confirm('Tem certeza que deseja remover este produto?');
 
+  if (!confirmar) {
+    return;
+  }
+
+  try {
+    const resposta = await fetch(`/api/produtos/${id}`, {
+      method: 'DELETE'
+    });
+
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+      alert(dados.erro || 'Erro ao remover produto');
+      return;
+    }
+
+    alert('Produto removido com sucesso!');
+
+    // Recarrega a lista
+    carregarProdutos();
+
+  } catch (erro) {
+    console.error('Erro ao remover produto:', erro);
+    alert('Erro ao remover produto');
+  }
+}
 
 function normalizarEmpresaFront(sigla){
   const e = String(sigla || 'acp')
