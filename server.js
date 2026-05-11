@@ -425,6 +425,87 @@ app.get('/api/relatorios/meses', auth, async (req, res) => {
   }
 });
 
+
+app.get('/api/relatorios/resumo-empresas', auth, async (req, res) => {
+  const intervalo = obterIntervaloRelatorio(req.query);
+  const { inicio, fim, dataInicio, dataFim, label } = intervalo;
+
+  const empresas = [
+    { id: 'acp', nome: 'ACP Indústria de Móveis' },
+    { id: 'sleep', nome: 'Sleep Colchões' },
+    { id: 'tais', nome: 'Thaís Móveis' }
+  ];
+
+  try {
+    await garantirColunaFretePedido();
+
+    const resultados = [];
+
+    for (const emp of empresas) {
+      const filtroClientes = filtroEmpresaRelatorio('', emp.id);
+      const filtroPedidos = filtroEmpresaRelatorio('', emp.id);
+
+      const clientes = await get(
+        `SELECT COUNT(*) as total
+         FROM clientes
+         WHERE status = 'ativo'
+         AND ${filtroClientes.sql}`,
+        filtroClientes.params
+      );
+
+      const pedidos = await get(
+        `SELECT COUNT(*) as total
+         FROM pedidos
+         WHERE ${filtroPedidos.sql}
+         AND SUBSTR(CAST(data_pedido AS TEXT), 1, 10) >= ?
+         AND SUBSTR(CAST(data_pedido AS TEXT), 1, 10) < ?`,
+        [...filtroPedidos.params, inicio, fim]
+      );
+
+      const abertos = await get(
+        `SELECT COUNT(*) as total
+         FROM pedidos
+         WHERE status = 'aberto'
+         AND ${filtroPedidos.sql}
+         AND SUBSTR(CAST(data_pedido AS TEXT), 1, 10) >= ?
+         AND SUBSTR(CAST(data_pedido AS TEXT), 1, 10) < ?`,
+        [...filtroPedidos.params, inicio, fim]
+      );
+
+      const faturamento = await get(
+        `SELECT COALESCE(SUM(total), 0) as total
+         FROM pedidos
+         WHERE ${filtroPedidos.sql}
+         AND SUBSTR(CAST(data_pedido AS TEXT), 1, 10) >= ?
+         AND SUBSTR(CAST(data_pedido AS TEXT), 1, 10) < ?`,
+        [...filtroPedidos.params, inicio, fim]
+      );
+
+      resultados.push({
+        empresa: emp.id,
+        nome: emp.nome,
+        totalClientes: Number(clientes?.total || 0),
+        totalPedidos: Number(pedidos?.total || 0),
+        pedidosAbertos: Number(abertos?.total || 0),
+        faturamento: Number(faturamento?.total || 0)
+      });
+    }
+
+    res.json({
+      periodo: {
+        inicio: dataInicio,
+        fim: dataFim,
+        label
+      },
+      empresas: resultados
+    });
+  } catch (e) {
+    console.error('Erro no resumo por empresa:', e.message);
+    res.status(500).json({ erro: e.message });
+  }
+});
+
+
 app.get('/api/relatorios/mensal', auth, async (req, res) => {
   const empresaParam = req.query.empresa || 'acp';
   const empresa = empresaRespostaRelatorio(empresaParam);

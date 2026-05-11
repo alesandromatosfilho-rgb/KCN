@@ -10369,6 +10369,495 @@ function abrirRelatoriosDireto(){
   };
 })();
 
+
+
+/* Relatórios v9: resumo das 3 empresas na frente, atualizado igual painel de bordo */
+(function(){
+  function relPrimeiroDiaMes(){
+    const h = new Date();
+    return h.getFullYear() + '-' + String(h.getMonth() + 1).padStart(2, '0') + '-01';
+  }
+
+  function relUltimoDiaMes(){
+    const h = new Date();
+    const u = new Date(h.getFullYear(), h.getMonth() + 1, 0);
+    return u.getFullYear() + '-' + String(u.getMonth() + 1).padStart(2, '0') + '-' + String(u.getDate()).padStart(2, '0');
+  }
+
+  function relNomeEmpresa(emp){
+    const e = normalizarEmpresaFront(emp || 'acp');
+
+    if(e === 'sleep') return 'Sleep Colchões';
+    if(e === 'tais') return 'Thaís Móveis';
+
+    return 'ACP Indústria de Móveis';
+  }
+
+  function relEmpresaSelecionada(){
+    const sel = document.getElementById('relatorio-empresa-select');
+    return normalizarEmpresaFront(sel && sel.value ? sel.value : 'acp');
+  }
+
+  function relEscape(valor){
+    return escapeHtmlProduto(valor || '-');
+  }
+
+  function relItens(itens){
+    if(!itens || !itens.length) return '-';
+
+    return itens.map(function(i){
+      const produto = [
+        i.produto_codigo || '',
+        i.produto_nome || ''
+      ].filter(Boolean).join(' - ');
+
+      return relEscape(produto) + ' / Qtd: ' + relEscape(i.quantidade);
+    }).join('<br>');
+  }
+
+  function relDatas(){
+    const inicioEl = document.getElementById('relatorio-data-inicio');
+    const fimEl = document.getElementById('relatorio-data-fim');
+
+    const dataInicio = inicioEl && inicioEl.value ? inicioEl.value : relPrimeiroDiaMes();
+    const dataFim = fimEl && fimEl.value ? fimEl.value : relUltimoDiaMes();
+
+    if(inicioEl && !inicioEl.value) inicioEl.value = dataInicio;
+    if(fimEl && !fimEl.value) fimEl.value = dataFim;
+
+    return { dataInicio, dataFim };
+  }
+
+  function relSetLoading(){
+    const alvo = document.getElementById('relatorio-resultado');
+    if(alvo){
+      alvo.innerHTML =
+        '<div class="card" style="background:#fff!important;color:#222!important">' +
+          '<strong style="font-size:15px">Carregando relatório...</strong>' +
+          '<p style="font-size:13px;color:#666;margin-top:8px">Buscando dados reais no banco para a empresa selecionada.</p>' +
+        '</div>';
+    }
+  }
+
+  function relSetLoadingEmpresas(){
+    const alvo = document.getElementById('relatorio-resumo-empresas');
+    if(alvo){
+      alvo.innerHTML =
+        '<div class="card" style="grid-column:1/-1;background:#fff!important;color:#222!important">' +
+          '<strong>Carregando resumo das empresas...</strong>' +
+        '</div>';
+    }
+  }
+
+  function relResetCards(){
+    const ids = {
+      'rel-total-pedidos': '0',
+      'rel-faturamento': 'R$ 0,00',
+      'rel-abertos': '0',
+      'rel-clientes': '0'
+    };
+
+    Object.keys(ids).forEach(function(id){
+      const el = document.getElementById(id);
+      if(el) el.textContent = ids[id];
+    });
+  }
+
+  window.fecharRelatoriosFlutuante = function(){
+    const el = document.getElementById('relatorios-flutuante');
+    if(el) el.remove();
+  };
+
+  window.definirMesAtualRelatorio = function(){
+    const inicio = document.getElementById('relatorio-data-inicio');
+    const fim = document.getElementById('relatorio-data-fim');
+
+    if(inicio) inicio.value = relPrimeiroDiaMes();
+    if(fim) fim.value = relUltimoDiaMes();
+  };
+
+  window.htmlRelatoriosFlutuante = function(){
+    return '' +
+      '<div id="relatorios-flutuante" style="position:fixed;left:220px;top:78px;right:24px;bottom:24px;z-index:99999;background:rgba(255,255,255,.98);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:auto;padding:24px;color:#222">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;border-bottom:1px solid #ddd;padding-bottom:12px">' +
+          '<div>' +
+            '<h2 style="margin:0;font-size:22px;color:#222">Relatórios Mensais</h2>' +
+            '<p style="margin:6px 0 0;font-size:13px;color:#666">Resumo atualizado por empresa, pedidos, faturamento e clientes por período.</p>' +
+          '</div>' +
+          '<button id="btn-fechar-relatorio" class="btn btn-secondary">Fechar</button>' +
+        '</div>' +
+
+        '<div class="card" style="margin-bottom:16px;background:#fff!important;color:#222!important">' +
+          '<div class="form-row">' +
+            '<div class="form-group">' +
+              '<label>Empresa para detalhes</label>' +
+              '<select id="relatorio-empresa-select" style="width:100%;height:38px;border:1px solid #ddd;border-radius:4px;padding:6px">' +
+                '<option value="acp">ACP Indústria de Móveis</option>' +
+                '<option value="sleep">Sleep Colchões</option>' +
+                '<option value="tais">Thaís Móveis</option>' +
+              '</select>' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label>Data inicial</label>' +
+              '<input type="date" id="relatorio-data-inicio"/>' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label>Data final</label>' +
+              '<input type="date" id="relatorio-data-fim"/>' +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+            '<button id="btn-buscar-relatorio" class="btn btn-primary">Buscar período</button>' +
+            '<button id="btn-mes-atual-relatorio" class="btn btn-secondary">Mês atual</button>' +
+            '<button id="btn-imprimir-relatorio" class="btn btn-success">Imprimir relatório</button>' +
+          '</div>' +
+          '<p style="font-size:12px;color:#777;margin-top:10px">' +
+            'O resumo abaixo mostra ACP, Sleep e Thaís ao mesmo tempo. A empresa do campo acima controla apenas os detalhes da tabela de pedidos.' +
+          '</p>' +
+        '</div>' +
+
+        '<div class="card" style="margin-bottom:16px;background:#fff!important;color:#222!important">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px">' +
+            '<strong style="font-size:15px">Resumo atualizado por empresa</strong>' +
+            '<small id="rel-periodo-label" style="color:#777"></small>' +
+          '</div>' +
+          '<div id="relatorio-resumo-empresas" class="cards-grid" style="margin-bottom:0"></div>' +
+        '</div>' +
+
+        '<div class="cards-grid">' +
+          '<div class="card" style="background:#fff!important;color:#222!important"><div class="card-number" id="rel-total-pedidos">0</div><div class="card-label">Pedidos no período da empresa detalhada</div></div>' +
+          '<div class="card green" style="background:#fff!important;color:#222!important"><div class="card-number" id="rel-faturamento">R$ 0,00</div><div class="card-label">Faturamento da empresa detalhada</div></div>' +
+          '<div class="card orange" style="background:#fff!important;color:#222!important"><div class="card-number" id="rel-abertos">0</div><div class="card-label">Pedidos em aberto</div></div>' +
+          '<div class="card" style="background:#fff!important;color:#222!important"><div class="card-number" id="rel-clientes">0</div><div class="card-label">Clientes atendidos</div></div>' +
+        '</div>' +
+
+        '<div id="relatorio-resultado" style="margin-top:20px"></div>' +
+      '</div>';
+  };
+
+  window.carregarResumoEmpresasRelatorio = async function(){
+    const datas = relDatas();
+
+    if(datas.dataInicio > datas.dataFim){
+      toast('A data inicial não pode ser maior que a data final','error');
+      return;
+    }
+
+    relSetLoadingEmpresas();
+
+    const periodoLabel = document.getElementById('rel-periodo-label');
+    if(periodoLabel){
+      periodoLabel.textContent = datas.dataInicio + ' até ' + datas.dataFim;
+    }
+
+    try{
+      const dados = await api(
+        '/api/relatorios/resumo-empresas?data_inicio=' + encodeURIComponent(datas.dataInicio) +
+        '&data_fim=' + encodeURIComponent(datas.dataFim) +
+        '&_=' + Date.now()
+      );
+
+      const alvo = document.getElementById('relatorio-resumo-empresas');
+      if(!alvo) return;
+
+      const empresas = dados.empresas || [];
+
+      alvo.innerHTML = empresas.map(function(e){
+        return '' +
+          '<div class="card" data-rel-empresa="' + relEscape(e.empresa) + '" style="cursor:pointer;background:#fff!important;color:#222!important;border-left:5px solid var(--blue);">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">' +
+              '<strong style="font-size:14px">' + relEscape(e.nome) + '</strong>' +
+              '<span class="badge badge-info">ver detalhes</span>' +
+            '</div>' +
+            '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px">' +
+              '<div><div style="font-size:24px;font-weight:800;color:#b08a3c">' + relEscape(e.totalClientes) + '</div><small>Clientes ativos</small></div>' +
+              '<div><div style="font-size:24px;font-weight:800;color:#b08a3c">' + relEscape(e.totalPedidos) + '</div><small>Pedidos</small></div>' +
+              '<div><div style="font-size:24px;font-weight:800;color:#b08a3c">' + relEscape(e.pedidosAbertos) + '</div><small>Em aberto</small></div>' +
+              '<div><div style="font-size:24px;font-weight:800;color:#b08a3c">R$ ' + formatMoeda(e.faturamento) + '</div><small>Faturamento</small></div>' +
+            '</div>' +
+          '</div>';
+      }).join('');
+
+      Array.from(alvo.querySelectorAll('[data-rel-empresa]')).forEach(function(card){
+        card.addEventListener('click', function(){
+          window.selecionarEmpresaResumoRelatorio(card.getAttribute('data-rel-empresa'));
+        });
+      });
+
+    }catch(e){
+      console.error('Erro no resumo das empresas:', e);
+      const alvo = document.getElementById('relatorio-resumo-empresas');
+      if(alvo){
+        alvo.innerHTML =
+          '<div class="card" style="grid-column:1/-1;border:1px solid #f44336;background:#fff5f5!important;color:#222!important">' +
+            '<strong style="color:#b00020">Erro ao carregar resumo das empresas</strong>' +
+            '<p style="font-size:13px;color:#555;margin-top:8px">' + relEscape(e.message || 'Erro') + '</p>' +
+          '</div>';
+      }
+    }
+  };
+
+  window.selecionarEmpresaResumoRelatorio = function(empresa){
+    const sel = document.getElementById('relatorio-empresa-select');
+    if(sel){
+      sel.value = normalizarEmpresaFront(empresa);
+    }
+    window.carregarRelatorioMensal(false);
+  };
+
+  window.carregarRelatorioMensal = async function(atualizarResumo){
+    if(atualizarResumo !== false){
+      window.carregarResumoEmpresasRelatorio();
+    }
+
+    const empresa = relEmpresaSelecionada();
+    const datas = relDatas();
+
+    if(datas.dataInicio > datas.dataFim){
+      toast('A data inicial não pode ser maior que a data final','error');
+      return;
+    }
+
+    relSetLoading();
+    relResetCards();
+
+    const btn = document.getElementById('btn-buscar-relatorio');
+    if(btn){
+      btn.disabled = true;
+      btn.textContent = 'Buscando...';
+    }
+
+    try{
+      const url =
+        '/api/relatorios/mensal?empresa=' + encodeURIComponent(empresa) +
+        '&data_inicio=' + encodeURIComponent(datas.dataInicio) +
+        '&data_fim=' + encodeURIComponent(datas.dataFim) +
+        '&_=' + Date.now();
+
+      const dados = await api(url);
+
+      window.relatorioMensalAtual = dados;
+      relatorioMensalAtual = dados;
+
+      const totalEl = document.getElementById('rel-total-pedidos');
+      const faturamentoEl = document.getElementById('rel-faturamento');
+      const abertosEl = document.getElementById('rel-abertos');
+      const clientesEl = document.getElementById('rel-clientes');
+
+      if(totalEl) totalEl.textContent = dados.resumo.totalPedidos || 0;
+      if(faturamentoEl) faturamentoEl.textContent = 'R$ ' + formatMoeda(dados.resumo.faturamento || 0);
+      if(abertosEl) abertosEl.textContent = dados.resumo.pedidosAbertos || 0;
+      if(clientesEl) clientesEl.textContent = dados.resumo.clientesAtendidos || 0;
+
+      const pedidos = dados.pedidos || [];
+      const clientes = dados.clientes || [];
+
+      const linhasPedidos = pedidos.length ? pedidos.map(function(p){
+        const cidadeUf = [p.cliente_cidade || '', p.cliente_estado || ''].filter(Boolean).join('/');
+        const empresaLinha = normalizarEmpresaFront(p.empresa || empresa);
+
+        return '<tr>' +
+          '<td><strong>' + relEscape(p.numero) + '</strong><br><small>' + relEscape(relNomeEmpresa(empresaLinha)) + '</small></td>' +
+          '<td>' + formatData(p.data_pedido) + '</td>' +
+          '<td>' + relEscape(p.cliente_nome) + '<br><small>' + relEscape(p.cliente_cnpj_cpf) + '</small></td>' +
+          '<td>' + relEscape(cidadeUf) + '</td>' +
+          '<td>' + relEscape(p.data_entrega) + '</td>' +
+          '<td>' + relEscape(p.frete) + '</td>' +
+          '<td>' + badgeStatus(p.status) + '</td>' +
+          '<td>R$ ' + formatMoeda(p.total) + '</td>' +
+          '<td style="min-width:260px">' + relItens(p.itens) + '</td>' +
+        '</tr>';
+      }).join('') : '<tr><td colspan="9" class="empty-state"><p>Nenhum pedido nesse período para ' + relEscape(relNomeEmpresa(empresa)) + '</p></td></tr>';
+
+      const linhasClientes = clientes.length ? clientes.map(function(c){
+        const cidadeUf = [c.cidade || '', c.estado || ''].filter(Boolean).join('/');
+        return '<tr>' +
+          '<td>' + relEscape(c.razao_social) + '</td>' +
+          '<td>' + relEscape(c.cnpj_cpf) + '</td>' +
+          '<td>' + relEscape(cidadeUf) + '</td>' +
+          '<td>' + relEscape(c.telefone) + '</td>' +
+          '<td>' + relEscape(c.total_pedidos) + '</td>' +
+          '<td>R$ ' + formatMoeda(c.total_comprado) + '</td>' +
+        '</tr>';
+      }).join('') : '<tr><td colspan="6" class="empty-state"><p>Nenhum cliente atendido nesse período</p></td></tr>';
+
+      const labelPeriodo = dados.periodo && dados.periodo.label ? dados.periodo.label : (datas.dataInicio + ' até ' + datas.dataFim);
+
+      const alvo = document.getElementById('relatorio-resultado');
+
+      if(alvo){
+        alvo.innerHTML =
+          '<div class="card" style="background:#fff!important;color:#222!important">' +
+            '<strong style="font-size:15px">Detalhes da empresa selecionada</strong>' +
+            '<div style="margin-top:8px;font-size:13px;color:#555;line-height:1.7">' +
+              '<b>Empresa:</b> ' + relEscape(relNomeEmpresa(empresa)) + '<br>' +
+              '<b>Período:</b> ' + relEscape(labelPeriodo) + '<br>' +
+              '<b>Pedidos:</b> ' + relEscape(dados.resumo.totalPedidos) + ' | ' +
+              '<b>Abertos:</b> ' + relEscape(dados.resumo.pedidosAbertos) + ' | ' +
+              '<b>Aprovados:</b> ' + relEscape(dados.resumo.pedidosAprovados) + ' | ' +
+              '<b>Faturados:</b> ' + relEscape(dados.resumo.pedidosFaturados) + ' | ' +
+              '<b>Cancelados:</b> ' + relEscape(dados.resumo.pedidosCancelados) + '<br>' +
+              '<b>Faturamento:</b> R$ ' + formatMoeda(dados.resumo.faturamento || 0) +
+            '</div>' +
+          '</div>' +
+
+          '<div class="card" style="margin-top:16px;background:#fff!important;color:#222!important">' +
+            '<strong style="font-size:15px">Pedidos da empresa selecionada</strong>' +
+            '<div style="overflow:auto;margin-top:12px">' +
+              '<table>' +
+                '<thead>' +
+                  '<tr>' +
+                    '<th>Número / Empresa</th>' +
+                    '<th>Data</th>' +
+                    '<th>Cliente / CPF-CNPJ</th>' +
+                    '<th>Cidade</th>' +
+                    '<th>Prazo</th>' +
+                    '<th>Frete</th>' +
+                    '<th>Status</th>' +
+                    '<th>Total</th>' +
+                    '<th>Itens</th>' +
+                  '</tr>' +
+                '</thead>' +
+                '<tbody>' + linhasPedidos + '</tbody>' +
+              '</table>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="card" style="margin-top:16px;background:#fff!important;color:#222!important">' +
+            '<strong style="font-size:15px">Clientes atendidos pela empresa selecionada</strong>' +
+            '<div style="overflow:auto;margin-top:12px">' +
+              '<table>' +
+                '<thead>' +
+                  '<tr>' +
+                    '<th>Cliente</th>' +
+                    '<th>CPF/CNPJ</th>' +
+                    '<th>Cidade</th>' +
+                    '<th>Telefone</th>' +
+                    '<th>Pedidos</th>' +
+                    '<th>Total comprado</th>' +
+                  '</tr>' +
+                '</thead>' +
+                '<tbody>' + linhasClientes + '</tbody>' +
+              '</table>' +
+            '</div>' +
+          '</div>';
+      }
+
+    }catch(e){
+      console.error('Erro ao carregar relatório:', e);
+
+      const alvo = document.getElementById('relatorio-resultado');
+      if(alvo){
+        alvo.innerHTML =
+          '<div class="card" style="border:1px solid #f44336;background:#fff5f5!important;color:#222!important">' +
+            '<strong style="color:#b00020">Erro ao carregar relatório</strong>' +
+            '<p style="font-size:13px;color:#555;margin-top:8px">' + relEscape(e.message || 'Erro ao buscar relatório') + '</p>' +
+            '<p style="font-size:12px;color:#777">Confirme que o arquivo server.js também foi substituído pela versão v9 e reinicie o servidor.</p>' +
+          '</div>';
+      }
+
+      toast(e.message || 'Erro ao carregar relatório','error');
+    }finally{
+      if(btn){
+        btn.disabled = false;
+        btn.textContent = 'Buscar período';
+      }
+    }
+  };
+
+  window.imprimirRelatorioMensal = function(){
+    if(!window.relatorioMensalAtual){
+      toast('Carregue um relatório antes de imprimir','error');
+      return;
+    }
+
+    const empresa = relEmpresaSelecionada();
+    const resumo = document.getElementById('relatorio-resumo-empresas') ? document.getElementById('relatorio-resumo-empresas').outerHTML : '';
+    const conteudo = document.getElementById('relatorio-resultado') ? document.getElementById('relatorio-resultado').innerHTML : '';
+    const janela = window.open('', '_blank');
+
+    if(!janela){
+      toast('O navegador bloqueou a janela de impressão','error');
+      return;
+    }
+
+    const periodo = window.relatorioMensalAtual.periodo && window.relatorioMensalAtual.periodo.label
+      ? window.relatorioMensalAtual.periodo.label
+      : '';
+
+    janela.document.open();
+    janela.document.write(
+      '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+      '<title>Relatório ' + relEscape(periodo) + '</title>' +
+      '<style>' +
+        'body{font-family:Arial,sans-serif;padding:24px;color:#222;font-size:12px}' +
+        'h1{font-size:20px;margin:0 0 8px}' +
+        '.topo{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #222;padding-bottom:12px;margin-bottom:16px}' +
+        '.topo img{max-height:55px;max-width:130px;object-fit:contain}' +
+        '.card{border:1px solid #ddd;border-radius:6px;padding:14px;margin-bottom:14px}' +
+        '.cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}' +
+        'table{width:100%;border-collapse:collapse;margin-top:8px}' +
+        'th,td{border:1px solid #ddd;padding:6px;text-align:left;vertical-align:top}' +
+        'th{background:#f0f0f0}' +
+        '.badge{padding:2px 6px;border-radius:10px;background:#eee}' +
+        '@media print{button{display:none}}' +
+      '</style></head><body>' +
+        '<div class="topo">' +
+          '<img src="logo.png" alt="KCN">' +
+          '<div><h1>Relatório do Período</h1><div>' + relEscape(relNomeEmpresa(empresa)) + ' - ' + relEscape(periodo) + '</div></div>' +
+        '</div>' +
+        '<h2>Resumo por empresa</h2>' +
+        resumo +
+        conteudo +
+        '<script>window.onload=function(){setTimeout(function(){window.print();},500);};<\\/script>' +
+      '</body></html>'
+    );
+    janela.document.close();
+  };
+
+  window.abrirRelatoriosDireto = function(){
+    const antigo = document.getElementById('relatorios-flutuante');
+    if(antigo) antigo.remove();
+
+    document.body.insertAdjacentHTML('beforeend', window.htmlRelatoriosFlutuante());
+
+    const titulo = document.getElementById('topbar-title');
+    if(titulo) titulo.textContent = 'Relatórios';
+
+    const selectEmpresa = document.getElementById('relatorio-empresa-select');
+
+    if(selectEmpresa){
+      selectEmpresa.value = normalizarEmpresaFront(empresaAtual || 'acp');
+      selectEmpresa.addEventListener('change', function(){
+        window.carregarRelatorioMensal(false);
+      });
+    }
+
+    const inicio = document.getElementById('relatorio-data-inicio');
+    const fim = document.getElementById('relatorio-data-fim');
+
+    if(inicio) inicio.value = relPrimeiroDiaMes();
+    if(fim) fim.value = relUltimoDiaMes();
+
+    const btnBuscar = document.getElementById('btn-buscar-relatorio');
+    const btnMes = document.getElementById('btn-mes-atual-relatorio');
+    const btnImprimir = document.getElementById('btn-imprimir-relatorio');
+    const btnFechar = document.getElementById('btn-fechar-relatorio');
+
+    if(btnBuscar) btnBuscar.addEventListener('click', function(){ window.carregarRelatorioMensal(true); });
+    if(btnMes) btnMes.addEventListener('click', function(){ window.definirMesAtualRelatorio(); window.carregarRelatorioMensal(true); });
+    if(btnImprimir) btnImprimir.addEventListener('click', window.imprimirRelatorioMensal);
+    if(btnFechar) btnFechar.addEventListener('click', window.fecharRelatoriosFlutuante);
+
+    relSetLoading();
+    relSetLoadingEmpresas();
+
+    setTimeout(function(){
+      window.carregarRelatorioMensal(true);
+    }, 80);
+  };
+})();
+
 </script>
 </body>
 </html>
