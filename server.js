@@ -51,6 +51,7 @@ function normalizarEmpresa(empresa) {
 
 async function garantirColunaFretePedido() {
   await run(`ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS frete TEXT DEFAULT ''`);
+  await run(`ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS forma_pagamento TEXT DEFAULT ''`);
 }
 
 function obterIntervaloMes(mes) {
@@ -1013,6 +1014,7 @@ app.post('/api/pedidos', auth, async (req, res) => {
     cliente_id,
     data_entrega,
     frete,
+    forma_pagamento,
     observacao,
     itens,
     empresa,
@@ -1040,14 +1042,15 @@ const emp = normalizarEmpresa(empresa);
 
     const r = await run(
       `INSERT INTO pedidos 
-      (numero, cliente_id, vendedor_id, data_entrega, frete, observacao, total, empresa, cor) 
-      VALUES (?,?,?,?,?,?,?,?,?)`,
+      (numero, cliente_id, vendedor_id, data_entrega, frete, forma_pagamento, observacao, total, empresa, cor) 
+      VALUES (?,?,?,?,?,?,?,?,?,?)`,
       [
         numeroTemporario,
         cliente_id,
         req.usuario.id,
         data_entrega || '',
         frete || '',
+        forma_pagamento || '',
         observacao || '',
         total,
         emp,
@@ -1103,6 +1106,7 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
     cliente_id,
     data_entrega,
     frete,
+    forma_pagamento,
     observacao,
     itens,
     empresa,
@@ -1141,6 +1145,7 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
        SET cliente_id = ?,
            data_entrega = ?,
            frete = ?,
+           forma_pagamento = ?,
            observacao = ?,
            total = ?,
            empresa = ?,
@@ -1150,6 +1155,7 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
         cliente_id,
         data_entrega || '',
         frete || '',
+        forma_pagamento || '',
         observacao || '',
         total,
         emp,

@@ -5554,6 +5554,15 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
         <label>Frete</label>
         <input id="ped-frete" type="text" placeholder="Ex: CIF, FOB, R$ 100,00 ou a combinar"/>
       </div>
+      <div class="form-group">
+        <label>Forma de Pagamento</label>
+        <select id="ped-forma-pagamento">
+          <option value="">Selecione a forma de pagamento...</option>
+          <option value="Boleto Bancário">Boleto Bancário</option>
+          <option value="Cheque">Cheque</option>
+          <option value="Blu">Blu</option>
+        </select>
+      </div>
     </div>
 
     <div class="form-group">
@@ -7349,6 +7358,7 @@ async function abrirModalPedido(){
     document.getElementById('ped-obs').value = '';
     document.getElementById('ped-entrega').value = '';
     if(document.getElementById('ped-frete')) document.getElementById('ped-frete').value = '';
+    if(document.getElementById('ped-forma-pagamento')) document.getElementById('ped-forma-pagamento').value = '';
     document.getElementById('total-pedido').textContent = '0,00';
 
     abrirModal('modal-pedido');
@@ -7772,6 +7782,7 @@ async function abrirModalEditarPedido(id){
 
     document.getElementById('ped-entrega').value = pedido.data_entrega || '';
     if(document.getElementById('ped-frete')) document.getElementById('ped-frete').value = pedido.frete || '';
+    if(document.getElementById('ped-forma-pagamento')) document.getElementById('ped-forma-pagamento').value = pedido.forma_pagamento || '';
     document.getElementById('ped-obs').value = pedido.observacao || '';
     document.getElementById('tabela-itens').innerHTML = '';
     document.getElementById('total-pedido').textContent = '0,00';
@@ -7832,6 +7843,7 @@ async function salvarPedido(){
 
   const data_entrega = document.getElementById('ped-entrega').value || '';
   const frete = document.getElementById('ped-frete') ? document.getElementById('ped-frete').value : '';
+  const forma_pagamento = document.getElementById('ped-forma-pagamento') ? document.getElementById('ped-forma-pagamento').value : '';
   const observacao = document.getElementById('ped-obs').value || '';
 
   const tbody = document.getElementById('tabela-itens');
@@ -7943,6 +7955,7 @@ await api(urlPedido, metodoPedido, {
   cliente_id: cliente_id,
   data_entrega: data_entrega,
   frete: frete,
+  forma_pagamento: forma_pagamento,
   observacao: observacao,
   itens: itens,
   empresa: empresaAtual,
@@ -8049,6 +8062,7 @@ async function verPedido(id){
       '<br><b>Prazo:</b> ' + (p.data_entrega || '-') +
       (p.cor ? '<br><b>Cor:</b> ' + valorPedidoSeguro(p.cor) : '') +
       '<br><b>Frete:</b> ' + valorPedidoSeguro(p.frete || '-') +
+      '<br><b>Forma de Pagamento:</b> ' + valorPedidoSeguro(p.forma_pagamento || '-') +
       (p.observacao ? '<br><b>Obs:</b> ' + valorPedidoSeguro(p.observacao) : '');
 
     document.getElementById('detalhe-itens').innerHTML = (p.itens || []).map(function(i){
@@ -8149,6 +8163,7 @@ function imprimirPedido(p){
       '<div class="grid">' +
         '<div class="campo"><span class="label">Número:</span> ' + valorPedidoSeguro(p.numero) + '</div>' +
         '<div class="campo"><span class="label">Frete:</span> ' + valorPedidoSeguro(p.frete || '-') + '</div>' +
+        '<div class="campo"><span class="label">Forma de Pagamento:</span> ' + valorPedidoSeguro(p.forma_pagamento || '-') + '</div>' +
         '<div class="campo"><span class="label">Data:</span> ' + formatData(p.data_pedido) + '</div>' +
         '<div class="campo"><span class="label">Prazo:</span> ' + (p.data_entrega || '-') + '</div>' +
         (p.observacao ? '<div class="campo full"><span class="label">Observação:</span> ' + valorPedidoSeguro(p.observacao) + '</div>' : '') +
