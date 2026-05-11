@@ -12257,6 +12257,215 @@ function abrirRelatoriosDireto(){
   };
 })();
 
+
+
+/* Impressão do Pedido v21: vertical bem distribuída, sem esticar linhas quando tem poucos itens */
+(function(){
+  function impSeguro(valor){
+    return escapeHtmlProduto(valor || '-');
+  }
+
+  function impCidade(p){
+    const cidadeUf = [
+      p.cliente_cidade || '',
+      p.cliente_estado || ''
+    ].filter(Boolean).join('/');
+
+    return cidadeUf || '-';
+  }
+
+  function impLogoEmpresa(empresa){
+    const e = normalizarEmpresaFront(empresa || empresaAtual);
+
+    if(e === 'sleep') return 'logo-sleep.png';
+    if(e === 'tais') return 'logo-thais.png';
+
+    return 'logo-acp.png';
+  }
+
+  function impNomeEmpresa(empresa){
+    const e = normalizarEmpresaFront(empresa || empresaAtual);
+
+    if(e === 'sleep') return 'Sleep Colchões';
+    if(e === 'tais') return 'Thaís Móveis';
+
+    return 'ACP Indústria de Móveis';
+  }
+
+  function impCss(qtdItens){
+    const muitosItens = Number(qtdItens || 0) > 12;
+    const poucosItens = Number(qtdItens || 0) <= 4;
+
+    return '' +
+      '@page{size:A4 portrait;margin:6mm}' +
+      '*{box-sizing:border-box}' +
+      'html,body{margin:0;padding:0;background:#fff;color:#222}' +
+      'body{font-family:Arial,Helvetica,sans-serif;font-size:' + (muitosItens ? '9.4px' : '10.4px') + ';line-height:1.22;padding:0}' +
+      '.folha{width:100%;min-height:285mm;padding:0 3mm;display:flex;flex-direction:column}' +
+
+      '.topo{display:grid;grid-template-columns:82px 1fr 82px;align-items:center;border-bottom:2px solid #222;padding:8px 0 10px;margin-bottom:10px}' +
+      '.logo-box{height:62px;display:flex;align-items:center;justify-content:center}' +
+      '.logo-box img{max-width:72px;max-height:58px;object-fit:contain}' +
+      '.titulo{text-align:center}' +
+      '.titulo h1{font-size:22px;letter-spacing:2px;margin:0 0 4px;text-transform:uppercase;color:#222}' +
+      '.titulo .sub{font-size:11px;font-weight:700;color:#555;margin:2px 0}' +
+      '.titulo .num{font-size:10px;color:#333;margin-top:4px}' +
+
+      '.secao{border:1px solid #d8d8d8;border-radius:6px;margin-bottom:9px;overflow:hidden;background:#fff;break-inside:avoid}' +
+      '.secao-titulo{background:#f1f1f1;font-weight:800;padding:6px 8px;text-transform:uppercase;font-size:9.5px;letter-spacing:.25px;border-bottom:1px solid #ddd}' +
+      '.grid{display:grid;grid-template-columns:1fr 1fr}' +
+      '.campo{padding:5px 8px;border-right:1px solid #eee;border-bottom:1px solid #eee;min-height:22px}' +
+      '.campo:nth-child(even){border-right:none}' +
+      '.campo.full{grid-column:1 / -1;border-right:none}' +
+      '.label{font-weight:800;color:#333}' +
+
+      '.secao.itens{display:block;min-height:0}' +
+      'table{width:100%;border-collapse:collapse;table-layout:fixed}' +
+      'th{background:#f4f4f4;border:1px solid #ddd;padding:5px 5px;text-align:left;font-size:9px;font-weight:800}' +
+      'td{border:1px solid #e1e1e1;padding:' + (muitosItens ? '3px 4px' : '4px 5px') + ';font-size:' + (muitosItens ? '8.5px' : '9.2px') + ';vertical-align:top;word-break:break-word}' +
+      'tbody tr:nth-child(even){background:#fcfcfc}' +
+      'th:nth-child(1),td:nth-child(1){width:41%}' +
+      'th:nth-child(2),td:nth-child(2){width:15%}' +
+      'th:nth-child(3),td:nth-child(3){width:7%;text-align:center}' +
+      'th:nth-child(4),td:nth-child(4){width:12%;text-align:right}' +
+      'th:nth-child(5),td:nth-child(5){width:8%;text-align:center}' +
+      'th:nth-child(6),td:nth-child(6){width:17%;text-align:right}' +
+
+      '.total{font-size:13px;font-weight:900;text-align:right;margin-top:6px;padding:6px 8px;background:#fafafa;border-top:1px solid #ddd}' +
+      '.obs{margin-top:3px;margin-bottom:7px;font-size:9px;color:#555}' +
+      '.espaco-final{flex:1;min-height:' + (poucosItens ? '30mm' : '8mm') + '}' +
+      '.assinaturas{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:12px;padding-top:14px}' +
+      '.assinatura{text-align:center;border-top:1px solid #333;padding-top:6px;font-size:9px;color:#555}' +
+      '.no-print{margin-top:14px;text-align:center}' +
+      '.no-print button{padding:8px 14px;border:0;border-radius:5px;background:#333;color:#fff;cursor:pointer}' +
+
+      '@media print{' +
+        'body{padding:0!important}' +
+        '.folha{min-height:285mm}' +
+        '.no-print{display:none!important}' +
+        '.secao{break-inside:avoid;page-break-inside:avoid}' +
+        '.secao.itens{break-inside:auto;page-break-inside:auto}' +
+        'table{break-inside:auto;page-break-inside:auto}' +
+        'tr{break-inside:avoid;page-break-inside:avoid}' +
+        '.assinaturas{break-inside:avoid;page-break-inside:avoid}' +
+      '}';
+  }
+
+  window.imprimirPedido = function(p){
+    const itens = p.itens || [];
+    const logoKcn = 'logo.png';
+    const logoEmpresa = impLogoEmpresa(p.empresa);
+    const empresaNome = impNomeEmpresa(p.empresa);
+    const cidadeCliente = impCidade(p);
+
+    const linhasItens = itens.map(function(i){
+      const produto = [
+        i.produto_codigo || '',
+        i.produto_nome || ''
+      ].filter(Boolean).join(' - ');
+
+      return '<tr>' +
+        '<td>' + impSeguro(produto) + '</td>' +
+        '<td>' + impSeguro(i.cor_item || '-') + '</td>' +
+        '<td>' + impSeguro(i.quantidade) + '</td>' +
+        '<td>R$ ' + formatMoeda(i.preco_unitario) + '</td>' +
+        '<td>' + impSeguro(i.desconto || 0) + '%</td>' +
+        '<td>R$ ' + formatMoeda(i.total) + '</td>' +
+      '</tr>';
+    }).join('');
+
+    const html = '<!DOCTYPE html>' +
+    '<html lang="pt-BR">' +
+    '<head>' +
+      '<meta charset="UTF-8">' +
+      '<title>Pedido ' + impSeguro(p.numero) + '</title>' +
+      '<style>' + impCss(itens.length) + '</style>' +
+    '</head>' +
+    '<body>' +
+      '<div class="folha">' +
+        '<div class="topo">' +
+          '<div class="logo-box"><img src="' + logoKcn + '" alt="KCN"></div>' +
+          '<div class="titulo">' +
+            '<h1>Pedido de Venda</h1>' +
+            '<div class="sub">KCN Representações</div>' +
+            '<div class="sub">' + impSeguro(empresaNome) + '</div>' +
+            '<div class="num">' + impSeguro(p.numero) + ' • ' + formatData(p.data_pedido) + '</div>' +
+          '</div>' +
+          '<div class="logo-box"><img src="' + logoEmpresa + '" alt="' + impSeguro(empresaNome) + '"></div>' +
+        '</div>' +
+
+        '<div class="secao">' +
+          '<div class="secao-titulo">Informações do Pedido</div>' +
+          '<div class="grid">' +
+            '<div class="campo"><span class="label">Número:</span> ' + impSeguro(p.numero) + '</div>' +
+            '<div class="campo"><span class="label">Frete:</span> ' + impSeguro(p.frete || '-') + '</div>' +
+            '<div class="campo"><span class="label">Forma de Pagamento:</span> ' + impSeguro(p.forma_pagamento || '-') + '</div>' +
+            '<div class="campo"><span class="label">Data:</span> ' + formatData(p.data_pedido) + '</div>' +
+            '<div class="campo full"><span class="label">Prazo:</span> ' + impSeguro(p.data_entrega) + '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="secao">' +
+          '<div class="secao-titulo">Informações do Cliente</div>' +
+          '<div class="grid">' +
+            '<div class="campo full"><span class="label">Cliente:</span> ' + impSeguro(p.cliente_nome) + '</div>' +
+            '<div class="campo"><span class="label">CPF/CNPJ:</span> ' + impSeguro(p.cliente_cnpj_cpf) + '</div>' +
+            '<div class="campo"><span class="label">Código:</span> ' + impSeguro(p.cliente_codigo_origem) + '</div>' +
+            '<div class="campo"><span class="label">Cidade:</span> ' + impSeguro(cidadeCliente) + '</div>' +
+            '<div class="campo"><span class="label">Telefone:</span> ' + impSeguro(p.cliente_telefone) + '</div>' +
+            '<div class="campo full"><span class="label">Email:</span> ' + impSeguro(p.cliente_email) + '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="secao itens">' +
+          '<div class="secao-titulo">Itens do Pedido</div>' +
+          '<table>' +
+            '<thead>' +
+              '<tr>' +
+                '<th>Produto</th>' +
+                '<th>Cor</th>' +
+                '<th>Qtd</th>' +
+                '<th>Preço</th>' +
+                '<th>Desc.</th>' +
+                '<th>Total</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + linhasItens + '</tbody>' +
+          '</table>' +
+          '<div class="total">Total: R$ ' + formatMoeda(p.total) + '</div>' +
+        '</div>' +
+
+        (p.observacao ? '<div class="obs"><strong>Observação:</strong> ' + impSeguro(p.observacao) + '</div>' : '') +
+
+        '<div class="espaco-final"></div>' +
+
+        '<div class="assinaturas">' +
+          '<div class="assinatura">Assinatura do Cliente</div>' +
+          '<div class="assinatura">KCN Representações</div>' +
+        '</div>' +
+
+        '<div class="no-print">' +
+          '<button onclick="window.print()">Imprimir</button> ' +
+          '<button onclick="window.close()">Fechar</button>' +
+        '</div>' +
+      '</div>' +
+      '<script>window.onload=function(){setTimeout(function(){window.print();},500);};<\\/script>' +
+    '</body>' +
+    '</html>';
+
+    const janela = window.open('', '_blank');
+
+    if(!janela){
+      toast('O navegador bloqueou a janela de impressão','error');
+      return;
+    }
+
+    janela.document.open();
+    janela.document.write(html);
+    janela.document.close();
+  };
+})();
+
 </script>
 </body>
 </html>
