@@ -89,6 +89,81 @@ function somarDiasISO(dataISO, dias) {
   return data.toISOString().slice(0, 10);
 }
 
+
+function variantesEmpresaRelatorio(empresa) {
+  const emp = String(empresa || 'acp')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+  if (emp === 'todos' || emp === 'todas' || emp === 'all') {
+    return [];
+  }
+
+  if (emp === 'sleep') {
+    return [
+      'sleep',
+      'sleep colchões',
+      'sleep colchoes',
+      'sleep móveis',
+      'sleep moveis'
+    ];
+  }
+
+  if (emp === 'tais' || emp === 'thais') {
+    return [
+      'tais',
+      'thais',
+      'thaís',
+      'tais móveis',
+      'tais moveis',
+      'thaís móveis',
+      'thais moveis'
+    ];
+  }
+
+  return [
+    'acp',
+    'acp indústria de móveis',
+    'acp industria de moveis',
+    'acp móveis',
+    'acp moveis'
+  ];
+}
+
+function filtroEmpresaRelatorio(alias, empresa) {
+  const variantes = variantesEmpresaRelatorio(empresa);
+
+  if (!variantes.length) {
+    return {
+      sql: '1=1',
+      params: []
+    };
+  }
+
+  const coluna = alias ? `${alias}.empresa` : 'empresa';
+
+  return {
+    sql: `LOWER(COALESCE(${coluna}, '')) IN (${variantes.map(() => '?').join(',')})`,
+    params: variantes
+  };
+}
+
+function empresaRespostaRelatorio(empresa) {
+  const emp = String(empresa || 'acp')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+  if (emp === 'todos' || emp === 'todas' || emp === 'all') return 'todos';
+  if (emp === 'sleep') return 'sleep';
+  if (emp === 'tais' || emp === 'thais') return 'tais';
+  return 'acp';
+}
+
+
 function obterIntervaloRelatorio(queryParams) {
   const dataInicio = String(queryParams.data_inicio || '').slice(0, 10);
   const dataFim = String(queryParams.data_fim || '').slice(0, 10);
@@ -351,12 +426,16 @@ app.get('/api/relatorios/meses', auth, async (req, res) => {
 });
 
 app.get('/api/relatorios/mensal', auth, async (req, res) => {
-  const empresa = normalizarEmpresa(req.query.empresa);
+  const empresaParam = req.query.empresa || 'acp';
+  const empresa = empresaRespostaRelatorio(empresaParam);
   const intervalo = obterIntervaloRelatorio(req.query);
   const { mes, inicio, fim, dataInicio, dataFim, label } = intervalo;
 
   try {
     await garantirColunaFretePedido();
+
+    const filtroResumo = filtroEmpresaRelatorio('', empresaParam);
+    const filtroPedido = filtroEmpresaRelatorio('p', empresaParam);
 
     const resumo = await get(
       `SELECT 
@@ -368,10 +447,10 @@ app.get('/api/relatorios/mensal', auth, async (req, res) => {
         SUM(CASE WHEN status = 'cancelado' THEN 1 ELSE 0 END) as pedidos_cancelados,
         COUNT(DISTINCT cliente_id) as clientes_atendidos
        FROM pedidos
-       WHERE empresa = ?
-       AND data_pedido >= ?
-       AND data_pedido < ?`,
-      [empresa, inicio, fim]
+       WHERE ${filtroResumo.sql}
+       AND SUBSTR(CAST(data_pedido AS TEXT), 1, 10) >= ?
+       AND SUBSTR(CAST(data_pedido AS TEXT), 1, 10) < ?`,
+      [...filtroResumo.params, inicio, fim]
     );
 
     const pedidos = await query(
@@ -388,11 +467,11 @@ app.get('/api/relatorios/mensal', auth, async (req, res) => {
         c.codigo_origem as cliente_codigo_origem
        FROM pedidos p
        LEFT JOIN clientes c ON c.id = p.cliente_id
-       WHERE p.empresa = ?
-       AND p.data_pedido >= ?
-       AND p.data_pedido < ?
+       WHERE ${filtroPedido.sql}
+       AND SUBSTR(CAST(p.data_pedido AS TEXT), 1, 10) >= ?
+       AND SUBSTR(CAST(p.data_pedido AS TEXT), 1, 10) < ?
        ORDER BY p.data_pedido DESC, p.id DESC`,
-      [empresa, inicio, fim]
+      [...filtroPedido.params, inicio, fim]
     );
 
     const itens = pedidos.length
@@ -431,16 +510,17 @@ app.get('/api/relatorios/mensal', auth, async (req, res) => {
         COALESCE(SUM(p.total), 0) as total_comprado
        FROM pedidos p
        LEFT JOIN clientes c ON c.id = p.cliente_id
-       WHERE p.empresa = ?
-       AND p.data_pedido >= ?
-       AND p.data_pedido < ?
+       WHERE ${filtroPedido.sql}
+       AND SUBSTR(CAST(p.data_pedido AS TEXT), 1, 10) >= ?
+       AND SUBSTR(CAST(p.data_pedido AS TEXT), 1, 10) < ?
        GROUP BY c.id, c.razao_social, c.nome_fantasia, c.cnpj_cpf, c.cidade, c.estado, c.telefone, c.email
        ORDER BY total_comprado DESC, c.razao_social`,
-      [empresa, inicio, fim]
+      [...filtroPedido.params, inicio, fim]
     );
 
     res.json({
       empresa,
+      empresaSolicitada: empresaParam,
       mes,
       inicio,
       fim,
@@ -466,7 +546,6 @@ app.get('/api/relatorios/mensal', auth, async (req, res) => {
     res.status(500).json({ erro: e.message });
   }
 });
-
 
 // ─── CLIENTES ───────────────────────────────────────────────────────────────
 
