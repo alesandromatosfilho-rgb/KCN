@@ -188,6 +188,14 @@ tr:hover td{
 }
     .page{display:none;padding:24px}
     .page.active{display:block}
+    #page-relatorios.active{
+      display:block !important;
+      background:rgba(255,255,255,0.94);
+      border-radius:14px;
+      margin:24px;
+      padding:24px;
+      box-shadow:0 8px 30px rgba(0,0,0,.18);
+    }
     #page-welcome{display:flex;align-items:center;justify-content:center;min-height:80vh}
     .welcome-box{text-align:center}
     .welcome-box h1{font-size:28px;font-weight:300;color:#999}
@@ -1767,8 +1775,8 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
   </a>
 </li>
 
-<li class="menu-item" onclick="showPage('relatorios','Relatórios')">
-  <a class="menu-link">
+<li class="menu-item">
+  <a class="menu-link" onclick="abrirRelatorios(); return false;">
     <div class="menu-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h18v2H3V3zm2 4h14v14H5V7zm3 3v8h2v-8H8zm4 3v5h2v-5h-2zm4-2v7h2v-7h-2z"/></svg></div>
     <span class="menu-label">Relatórios</span>
   </a>
@@ -5462,7 +5470,14 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
       </div>
     </div>
 
-    <div id="relatorio-resultado" style="margin-top:20px"></div>
+    <div id="relatorio-resultado" style="margin-top:20px">
+      <div class="card">
+        <strong style="font-size:15px">Relatórios prontos</strong>
+        <p style="font-size:13px;color:#666;margin-top:8px">
+          Escolha o mês e clique em <b>Buscar mês</b>. O mês atual também aparece aqui, mesmo antes de virar o mês.
+        </p>
+      </div>
+    </div>
   </div>
 
 </main>
@@ -6684,7 +6699,7 @@ function showPage(id, titulo){
   if(id==='tabela-sleep') {}
   if(id==='produtos-tais') carregarProdutosTais();
   if(id==='assistencia') carregarAssistencias();
-  if(id==='relatorios') carregarRelatorioMensal();
+  if(id==='relatorios') { setTimeout(function(){ carregarRelatorioMensal(); }, 50); }
 }
 
 
@@ -8323,6 +8338,10 @@ function textoItensRelatorio(itens){
 
     return escapeRelatorio(produto) + ' / Qtd: ' + escapeRelatorio(i.quantidade);
   }).join('<br>');
+}
+
+function abrirRelatorios(){
+  showPage('relatorios','Relatórios');
 }
 
 async function carregarRelatorioMensal(){
