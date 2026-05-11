@@ -1817,7 +1817,7 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
       <button class="btn btn-primary" onclick="abrirModalPedido()">+ Novo Pedido</button>
     </div>
     <table>
-      <thead><tr><th>Número</th><th>Cliente</th><th>Data</th><th>Entrega</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
+      <thead><tr><th>Número</th><th>Cliente</th><th>Data</th><th>Prazo</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
       <tbody id="tabela-pedidos"><tr><td colspan="7" class="empty-state"><p>Carregando...</p></td></tr></tbody>
     </table>
   </div>
@@ -5483,8 +5483,7 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
       </div>
 
       <div class="form-group">
-        <label>Data de Entrega</label>
-        <input id="ped-entrega" type="date"/>
+        <label>Prazo</label><select id="ped-entrega"><option value="">Selecione o prazo...</option><option value="À vista">À vista</option><option value="05 dias">05 dias</option><option value="15 dias">15 dias</option><option value="30 dias">30 dias</option><option value="30/60 dias">30/60 dias</option><option value="45 dias">45 dias</option><option value="45/75/105/135/165 dias">45/75/105/135/165 dias</option><option value="60 dias">60 dias</option><option value="60/90/120 dias">60/90/120 dias</option><option value="60/90/120/150 dias">60/90/120/150 dias</option><option value="60/90/120/150/180 dias">60/90/120/150/180 dias</option><option value="90 dias">90 dias</option><option value="30/60/90 dias">30/60/90 dias</option><option value="30/60/90/120/150 dias">30/60/90/120/150 dias</option><option value="30/60/90/120/150/180 dias">30/60/90/120/150/180 dias</option><option value="30/60/90/120/150/180/210 dias">30/60/90/120/150/180/210 dias</option></select>
       </div>
     </div>
 
@@ -7141,7 +7140,7 @@ async function carregarPedidos(){
           <td><strong>${p.numero}</strong></td>
           <td>${p.cliente_nome || '-'}</td>
           <td>${formatData(p.data_pedido)}</td>
-          <td>${formatData(p.data_entrega)}</td>
+          <td>${(p.data_entrega || '-')}</td>
           <td>R$ ${formatMoeda(p.total)}</td>
           <td>${badgeStatus(p.status)}</td>
           <td>
@@ -7964,7 +7963,7 @@ async function verPedido(id){
       '<br><b>Telefone:</b> ' + valorPedidoSeguro(p.cliente_telefone) +
       '<br><b>Email:</b> ' + valorPedidoSeguro(p.cliente_email) +
       '<br><b>Data:</b> ' + formatData(p.data_pedido) +
-      '<br><b>Entrega:</b> ' + formatData(p.data_entrega) +
+      '<br><b>Prazo:</b> ' + (p.data_entrega || '-') +
       (p.cor ? '<br><b>Cor:</b> ' + valorPedidoSeguro(p.cor) : '') +
       '<br><b>Status:</b> ' + badgeStatus(p.status) +
       (p.observacao ? '<br><b>Obs:</b> ' + valorPedidoSeguro(p.observacao) : '');
@@ -8068,7 +8067,7 @@ function imprimirPedido(p){
         '<div class="campo"><span class="label">Número:</span> ' + valorPedidoSeguro(p.numero) + '</div>' +
         '<div class="campo"><span class="label">Status:</span> ' + valorPedidoSeguro(p.status) + '</div>' +
         '<div class="campo"><span class="label">Data:</span> ' + formatData(p.data_pedido) + '</div>' +
-        '<div class="campo"><span class="label">Entrega:</span> ' + formatData(p.data_entrega) + '</div>' +
+        '<div class="campo"><span class="label">Prazo:</span> ' + (p.data_entrega || '-') + '</div>' +
         (p.observacao ? '<div class="campo full"><span class="label">Observação:</span> ' + valorPedidoSeguro(p.observacao) + '</div>' : '') +
       '</div>' +
     '</div>' +
