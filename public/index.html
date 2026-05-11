@@ -5639,6 +5639,7 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
         <thead>
           <tr>
             <th>Produto</th>
+            <th style="width:170px">Cor</th>
             <th style="width:80px">Qtd</th>
             <th style="width:40px"></th>
           </tr>
@@ -5679,6 +5680,7 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
           <tr>
             <th>Código</th>
             <th>Produto</th>
+            <th style="width:150px">Cor</th>
             <th style="width:80px">Qtd</th>
           </tr>
         </thead>
@@ -8425,6 +8427,59 @@ async function handleAnexoAssistencia(event){
 }
 
 
+function montarCampoCorAssistencia(idx){
+  const estiloBase = 'width:100%;padding:4px;border:1px solid #ddd;border-radius:3px;font-size:12px';
+
+  if(empresaAtual === 'sleep'){
+    return '<select data-ass-cor="principal" id="ass-cor-'+idx+'" style="'+estiloBase+';border-color:#7c6fcd;background:#f7f4ff">'+
+      '<option value="">Cor...</option>'+
+      CORES_SLEEP.map(function(c){
+        return '<option value="'+escapeHtmlProduto(c)+'">'+escapeHtmlProduto(c)+'</option>';
+      }).join('')+
+    '</select>';
+  }
+
+  if(empresaAtual === 'acp'){
+    return '<select data-ass-cor="principal" id="ass-cor-'+idx+'" style="'+estiloBase+';border-color:#8a6a3f;background:#fff8ed">'+
+      '<option value="">Cor...</option>'+
+      CORES_ACP.map(function(c){
+        return '<option value="'+escapeHtmlProduto(c)+'">'+escapeHtmlProduto(c)+'</option>';
+      }).join('')+
+    '</select>';
+  }
+
+  if(empresaAtual === 'tais'){
+    return '<div style="display:grid;gap:4px">'+
+      '<select data-ass-cor="tubular" id="ass-cor-tubular-'+idx+'" style="'+estiloBase+';border-color:#2e7d32;background:#f1fff3">'+
+        '<option value="">Tubular...</option>'+
+        CORES_TAIS_TUBULAR.map(function(c){
+          return '<option value="'+escapeHtmlProduto(c)+'">'+escapeHtmlProduto(c)+'</option>';
+        }).join('')+
+      '</select>'+
+      '<select data-ass-cor="estofado" id="ass-cor-estofado-'+idx+'" style="'+estiloBase+';border-color:#2e7d32;background:#f1fff3">'+
+        '<option value="">Estofado...</option>'+
+        CORES_TAIS_ESTOFADO.map(function(c){
+          return '<option value="'+escapeHtmlProduto(c)+'">'+escapeHtmlProduto(c)+'</option>';
+        }).join('')+
+      '</select>'+
+    '</div>';
+  }
+
+  return '<input data-ass-cor="principal" id="ass-cor-'+idx+'" type="text" value="" readonly style="'+estiloBase+';background:#f5f5f5;color:#999" placeholder="-"/>';
+}
+
+function obterCorAssistenciaDaLinha(row){
+  const campos = Array.from(row.querySelectorAll('[data-ass-cor]'));
+
+  const valores = campos
+    .map(function(campo){
+      return campo.value || '';
+    })
+    .filter(Boolean);
+
+  return valores.join(' / ');
+}
+
 function adicionarItemAssistencia(){
   const tbody = document.getElementById('tabela-itens-ass');
   const idx = tbody.children.length;
@@ -8447,6 +8502,7 @@ function adicionarItemAssistencia(){
         options+
       '</select>'+
     '</td>'+
+    '<td>'+montarCampoCorAssistencia(idx)+'</td>'+
     '<td><input type="number" id="ass-qtd-'+idx+'" value="1" min="1" step="1"/></td>'+
     '<td><button class="btn btn-danger btn-sm" onclick="removerLinhaItemAssistencia(this)">✕</button></td>';
 
@@ -8488,6 +8544,7 @@ async function salvarAssistencia(){
       itens.push({
         produto_codigo: produto_codigo,
         produto_nome: produto_nome,
+        cor_item: obterCorAssistenciaDaLinha(rows[i]),
         quantidade: qtd ? qtd.value : 1
       });
     }
@@ -8597,9 +8654,10 @@ async function verAssistencia(id){
       return '<tr>'+
         '<td>'+(i.produto_codigo || '-')+'</td>'+
         '<td>'+(i.produto_nome || '-')+'</td>'+
+        '<td>'+(i.cor_item || '-')+'</td>'+
         '<td>'+(i.quantidade || 1)+'</td>'+
       '</tr>';
-    }).join('') : '<tr><td colspan="3" class="empty-state"><p>Nenhum item</p></td></tr>';
+    }).join('') : '<tr><td colspan="4" class="empty-state"><p>Nenhum item</p></td></tr>';
 
     document.getElementById('cons-ass-numero').value = a.numero || '-';
     document.getElementById('cons-ass-status').value = a.status || '-';

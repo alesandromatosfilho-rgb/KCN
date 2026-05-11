@@ -942,15 +942,18 @@ app.post('/api/assistencias', auth, async (req, res) => {
       [numero, r.id]
     );
 
+    await run(`ALTER TABLE assistencia_itens ADD COLUMN IF NOT EXISTS cor_item TEXT DEFAULT ''`);
+
     for (const item of (itens || [])) {
       await run(
         `INSERT INTO assistencia_itens
-         (assistencia_id, produto_codigo, produto_nome, quantidade)
-         VALUES (?,?,?,?)`,
+         (assistencia_id, produto_codigo, produto_nome, cor_item, quantidade)
+         VALUES (?,?,?,?,?)`,
         [
           r.id,
           item.produto_codigo || '',
           item.produto_nome || '',
+          item.cor_item || '',
           Number(item.quantidade || 1)
         ]
       );
