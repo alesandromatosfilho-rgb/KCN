@@ -8266,29 +8266,37 @@ function imprimirPedido(p){
     '<title>Pedido ' + valorPedidoSeguro(p.numero) + '</title>' +
     '<style>' +
       '*{box-sizing:border-box}' +
-      'body{font-family:Arial, sans-serif;margin:0;padding:28px;color:#222;background:#fff;font-size:12px}' +
-      '.topo{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #222;padding-bottom:14px;margin-bottom:18px}' +
-      '.logo-box{width:170px;min-height:72px;display:flex;align-items:center}' +
+      '@page{size:A4 landscape;margin:4mm}' +
+      'html,body{width:100%;min-height:0}' +
+      'body{font-family:Arial, sans-serif;margin:0;padding:6px;color:#222;background:#fff;font-size:8.5px;line-height:1.15}' +
+      '.topo{display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid #222;padding-bottom:5px;margin-bottom:6px}' +
+      '.logo-box{width:110px;min-height:42px;display:flex;align-items:center}' +
       '.logo-box.right{justify-content:flex-end;text-align:right}' +
-      '.logo-box img{max-width:155px;max-height:70px;object-fit:contain}' +
-      '.titulo{text-align:center;flex:1;padding:0 18px}' +
-      '.titulo h1{font-size:22px;margin:4px 0 6px;text-transform:uppercase;letter-spacing:.5px}' +
-      '.titulo .sub{font-size:13px;font-weight:bold;color:#555}' +
-      '.secao{border:1px solid #ddd;border-radius:6px;margin-bottom:14px;overflow:hidden}' +
-      '.secao-titulo{background:#f0f0f0;font-weight:bold;padding:8px 10px;text-transform:uppercase;font-size:12px}' +
+      '.logo-box img{max-width:82px;max-height:40px;object-fit:contain}' +
+      '.titulo{text-align:center;flex:1;padding:0 8px}' +
+      '.titulo h1{font-size:16px;margin:0 0 2px;text-transform:uppercase;letter-spacing:.4px}' +
+      '.titulo .sub{font-size:9px;font-weight:bold;color:#555;line-height:1.15}' +
+      '.secao{border:1px solid #ddd;border-radius:4px;margin-bottom:5px;overflow:hidden;break-inside:auto;page-break-inside:auto}' +
+      '.secao-titulo{background:#f0f0f0;font-weight:bold;padding:4px 6px;text-transform:uppercase;font-size:8.5px}' +
       '.grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid #eee}' +
-      '.campo{padding:7px 10px;border-right:1px solid #eee;border-bottom:1px solid #eee;min-height:30px}' +
+      '.campo{padding:3px 5px;border-right:1px solid #eee;border-bottom:1px solid #eee;min-height:17px}' +
       '.campo:nth-child(even){border-right:none}' +
       '.campo.full{grid-column:1 / -1;border-right:none}' +
       '.label{font-weight:bold;color:#444}' +
-      'table{width:100%;border-collapse:collapse;margin-top:6px}' +
-      'th{background:#efefef;text-align:left;padding:8px;border:1px solid #ddd;font-size:12px}' +
-      'td{padding:8px;border:1px solid #e3e3e3;vertical-align:top}' +
+      'table{width:100%;border-collapse:collapse;margin-top:3px;table-layout:fixed}' +
+      'th{background:#efefef;text-align:left;padding:3px 4px;border:1px solid #ddd;font-size:8px;line-height:1.1}' +
+      'td{padding:2px 4px;border:1px solid #e3e3e3;vertical-align:top;font-size:8px;line-height:1.1;word-break:break-word}' +
+      'th:nth-child(1),td:nth-child(1){width:45%}' +
+      'th:nth-child(2),td:nth-child(2){width:14%}' +
+      'th:nth-child(3),td:nth-child(3){width:7%}' +
+      'th:nth-child(4),td:nth-child(4){width:11%}' +
+      'th:nth-child(5),td:nth-child(5){width:8%}' +
+      'th:nth-child(6),td:nth-child(6){width:15%}' +
       '.center{text-align:center}.right{text-align:right}' +
-      '.total{font-size:16px;font-weight:bold;text-align:right;margin-top:14px}' +
-      '.rodape{margin-top:34px;display:flex;gap:40px;justify-content:space-between}' +
-      '.assinatura{flex:1;text-align:center;border-top:1px solid #333;padding-top:7px;color:#555}' +
-      '@media print{body{padding:18px}.no-print{display:none !important}.secao{break-inside:avoid}button{display:none}}' +
+      '.total{font-size:10px;font-weight:bold;text-align:right;margin-top:5px}' +
+      '.rodape{display:none}' +
+      '.assinatura{display:none}' +
+      '@media print{body{padding:0;font-size:8px}.no-print{display:none !important}button{display:none}.secao{break-inside:auto!important;page-break-inside:auto!important}table{page-break-inside:auto}tr{page-break-inside:avoid;page-break-after:auto}}' +
     '</style>' +
   '</head>' +
   '<body>' +
