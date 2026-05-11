@@ -1527,6 +1527,114 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
   text-align:left !important;
   border:1px solid #d7d7d7 !important;
 }
+
+
+/* CORES DA TELA DE PEDIDO DE ASSISTÊNCIA */
+#page-assistencia .assistencia-legenda{
+  display:flex;
+  gap:10px;
+  margin:0 0 14px 0;
+  flex-wrap:wrap;
+}
+
+#page-assistencia .assistencia-legenda-item{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:8px;
+  background:rgba(255,255,255,0.92);
+  border:1px solid rgba(0,0,0,0.08);
+  font-size:12px;
+  font-weight:700;
+  color:#333;
+  box-shadow:0 1px 4px rgba(0,0,0,0.06);
+}
+
+#page-assistencia .assistencia-dot{
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  display:inline-block;
+}
+
+#page-assistencia .dot-aberto{background:#1e9fd4;box-shadow:0 0 8px rgba(30,159,212,.6)}
+#page-assistencia .dot-concluido{background:#4caf50;box-shadow:0 0 8px rgba(76,175,80,.6)}
+#page-assistencia .dot-cancelado{background:#f44336;box-shadow:0 0 8px rgba(244,67,54,.6)}
+
+#page-assistencia table{
+  overflow:hidden;
+  border-radius:8px;
+  box-shadow:0 2px 10px rgba(0,0,0,.08);
+}
+
+#page-assistencia thead th{
+  background:linear-gradient(135deg,#5b3f22,#8a6a3f) !important;
+  color:#fff !important;
+  border-bottom:none !important;
+  font-weight:800 !important;
+}
+
+#page-assistencia .assistencia-row td{
+  transition:background .2s, border-color .2s;
+}
+
+#page-assistencia .assistencia-status-aberto td{
+  background:rgba(30,159,212,0.08) !important;
+  border-bottom:1px solid rgba(30,159,212,0.20) !important;
+}
+
+#page-assistencia .assistencia-status-concluido td{
+  background:rgba(76,175,80,0.10) !important;
+  border-bottom:1px solid rgba(76,175,80,0.22) !important;
+}
+
+#page-assistencia .assistencia-status-cancelado td{
+  background:rgba(244,67,54,0.08) !important;
+  border-bottom:1px solid rgba(244,67,54,0.22) !important;
+}
+
+#page-assistencia .assistencia-status-pendente td{
+  background:rgba(255,152,0,0.09) !important;
+  border-bottom:1px solid rgba(255,152,0,0.22) !important;
+}
+
+#page-assistencia .assistencia-status-aberto td:first-child{border-left:5px solid #1e9fd4 !important;}
+#page-assistencia .assistencia-status-concluido td:first-child{border-left:5px solid #4caf50 !important;}
+#page-assistencia .assistencia-status-cancelado td:first-child{border-left:5px solid #f44336 !important;}
+#page-assistencia .assistencia-status-pendente td:first-child{border-left:5px solid #ff9800 !important;}
+
+#page-assistencia tr:hover td{
+  filter:brightness(0.98);
+}
+
+#page-assistencia .badge-assistencia{
+  display:inline-block;
+  min-width:82px;
+  text-align:center;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.3px;
+}
+
+#page-assistencia .badge-ass-aberto{background:#e3f2fd;color:#0d73a8;border:1px solid rgba(30,159,212,.35)}
+#page-assistencia .badge-ass-concluido{background:#e8f5e9;color:#2e7d32;border:1px solid rgba(76,175,80,.35)}
+#page-assistencia .badge-ass-cancelado{background:#ffebee;color:#c62828;border:1px solid rgba(244,67,54,.35)}
+#page-assistencia .badge-ass-pendente{background:#fff3e0;color:#ef6c00;border:1px solid rgba(255,152,0,.35)}
+#page-assistencia .badge-ass-outro{background:#eeeeee;color:#555;border:1px solid rgba(0,0,0,.12)}
+
+#page-assistencia .btn-ass-ver{background:#1e9fd4 !important;color:#fff !important;}
+#page-assistencia .btn-ass-ver:hover{background:#0d7aab !important;}
+#page-assistencia .btn-ass-concluir{background:#4caf50 !important;color:#fff !important;}
+#page-assistencia .btn-ass-concluir:hover{background:#388e3c !important;}
+#page-assistencia .btn-ass-cancelar{background:#ff9800 !important;color:#fff !important;}
+#page-assistencia .btn-ass-cancelar:hover{background:#f57c00 !important;}
+#page-assistencia .btn-ass-remover{background:#f44336 !important;color:#fff !important;}
+#page-assistencia .btn-ass-remover:hover{background:#c62828 !important;}
+
  </style>
 </head>
 <body>
@@ -1747,6 +1855,11 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
   </div>
   <div class="search-bar">
     <input type="text" id="busca-assistencia" placeholder="Buscar por cliente ou motivo..." oninput="carregarAssistencias()"/>
+  </div>
+  <div class="assistencia-legenda">
+    <div class="assistencia-legenda-item"><span class="assistencia-dot dot-aberto"></span> Aberto</div>
+    <div class="assistencia-legenda-item"><span class="assistencia-dot dot-concluido"></span> Concluído</div>
+    <div class="assistencia-legenda-item"><span class="assistencia-dot dot-cancelado"></span> Cancelado</div>
   </div>
   <table>
     <thead>
@@ -8407,6 +8520,28 @@ async function salvarAssistencia(){
 }
 
 
+
+function normalizarStatusAssistencia(status){
+  const s = String(status || 'aberto')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  if(s === 'aberto') return 'aberto';
+  if(s === 'concluido' || s === 'concluida' || s === 'finalizado' || s === 'finalizada') return 'concluido';
+  if(s === 'cancelado' || s === 'cancelada') return 'cancelado';
+  if(s === 'pendente') return 'pendente';
+
+  return 'outro';
+}
+
+function badgeStatusAssistencia(status){
+  const s = normalizarStatusAssistencia(status);
+  const texto = status || 'aberto';
+
+  return '<span class="badge-assistencia badge-ass-' + s + '">' + texto + '</span>';
+}
+
 async function carregarAssistencias(){
   const busca = (
     document.getElementById('busca-assistencia') &&
@@ -8427,19 +8562,21 @@ async function carregarAssistencias(){
     }
 
     tbody.innerHTML = lista.map(function(a){
-      return '<tr>'+
+      const statusAssistencia = normalizarStatusAssistencia(a.status || 'aberto');
+
+      return '<tr class="assistencia-row assistencia-status-' + statusAssistencia + '">'+
         '<td><strong>'+(a.numero || '-')+'</strong></td>'+
         '<td>'+(a.cliente_nome || '-')+'</td>'+
         '<td>'+(a.motivo || '-')+'</td>'+
         '<td>'+(a.fabricacao ? formatData(a.fabricacao) : '-')+'</td>'+
         '<td>'+(a.data ? formatData(a.data) : '-')+'</td>'+
-        '<td>'+badgeStatus(a.status || 'aberto')+'</td>'+
+        '<td>'+badgeStatusAssistencia(a.status || 'aberto')+'</td>'+
         '<td>'+
           '<div class="action-btns">'+
-            '<button class="btn btn-primary btn-sm" onclick="verAssistencia('+a.id+')">Ver</button>'+
-            '<button class="btn btn-success btn-sm" onclick="concluirAssistencia('+a.id+')">Concluir</button>'+
-            '<button class="btn btn-danger btn-sm" onclick="cancelarAssistencia('+a.id+')">Cancelar</button>'+
-            '<button class="btn btn-danger btn-sm" onclick="removerAssistencia('+a.id+')">Remover</button>'+
+            '<button class="btn btn-sm btn-ass-ver" onclick="verAssistencia('+a.id+')">Ver</button>'+
+            '<button class="btn btn-sm btn-ass-concluir" onclick="concluirAssistencia('+a.id+')">Concluir</button>'+
+            '<button class="btn btn-sm btn-ass-cancelar" onclick="cancelarAssistencia('+a.id+')">Cancelar</button>'+
+            '<button class="btn btn-sm btn-ass-remover" onclick="removerAssistencia('+a.id+')">Remover</button>'+
           '</div>'+
         '</td>'+
       '</tr>';
