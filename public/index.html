@@ -1644,6 +1644,38 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
 #page-assistencia .btn-ass-remover:hover{background:#c62828 !important;}
 
  </style>
+
+<style>
+  #page-relatorios,
+  #page-relatorios.active,
+  body #page-relatorios.active{
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    min-height:calc(100vh - 90px) !important;
+    background:rgba(255,255,255,0.96) !important;
+    border-radius:14px !important;
+    margin:24px !important;
+    padding:24px !important;
+    box-shadow:0 8px 30px rgba(0,0,0,.22) !important;
+    position:relative !important;
+    z-index:50 !important;
+    color:#222 !important;
+  }
+
+  #page-relatorios .card{
+    background:#fff !important;
+    color:#222 !important;
+    border:1px solid #ddd !important;
+  }
+
+  #page-relatorios table,
+  #page-relatorios th,
+  #page-relatorios td{
+    color:#222 !important;
+  }
+</style>
+
 </head>
 <body>
 
@@ -1776,7 +1808,7 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
 </li>
 
 <li class="menu-item">
-  <a class="menu-link" onclick="abrirRelatorios(); return false;">
+  <a class="menu-link" onclick="abrirRelatoriosDireto(); return false;">
     <div class="menu-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h18v2H3V3zm2 4h14v14H5V7zm3 3v8h2v-8H8zm4 3v5h2v-5h-2zm4-2v7h2v-7h-2z"/></svg></div>
     <span class="menu-label">Relatórios</span>
   </a>
@@ -6699,7 +6731,7 @@ function showPage(id, titulo){
   if(id==='tabela-sleep') {}
   if(id==='produtos-tais') carregarProdutosTais();
   if(id==='assistencia') carregarAssistencias();
-  if(id==='relatorios') { setTimeout(function(){ carregarRelatorioMensal(); }, 50); }
+  if(id==='relatorios') { setTimeout(function(){ garantirTelaRelatoriosMensais(); carregarRelatorioMensal(); }, 50); }
 }
 
 
@@ -8287,6 +8319,108 @@ async function excluirEvento(id){
 }
 
 
+
+function htmlTelaRelatoriosMensais(){
+  return '' +
+    '<div class="page-header">' +
+      '<h2>Relatórios Mensais</h2>' +
+      '<button class="btn btn-primary" onclick="carregarRelatorioMensal()">Atualizar Relatório</button>' +
+    '</div>' +
+
+    '<div class="card" style="margin-bottom:16px">' +
+      '<div class="form-row">' +
+        '<div class="form-group">' +
+          '<label>Mês do relatório</label>' +
+          '<input type="month" id="relatorio-mes"/>' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label>Empresa</label>' +
+          '<input type="text" id="relatorio-empresa-label" readonly/>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+        '<button class="btn btn-primary" onclick="carregarRelatorioMensal()">Buscar mês</button>' +
+        '<button class="btn btn-secondary" onclick="definirMesAtualRelatorio(); carregarRelatorioMensal();">Mês atual</button>' +
+        '<button class="btn btn-success" onclick="imprimirRelatorioMensal()">Imprimir relatório</button>' +
+      '</div>' +
+      '<p style="font-size:12px;color:#777;margin-top:10px">' +
+        'O painel de bordo mostra somente o mês atual. Quando o mês vira, pedidos e faturamento zeram automaticamente no painel, mas os dados antigos continuam aqui nos relatórios.' +
+      '</p>' +
+    '</div>' +
+
+    '<div class="cards-grid">' +
+      '<div class="card">' +
+        '<div class="card-number" id="rel-total-pedidos">0</div>' +
+        '<div class="card-label">Pedidos no mês</div>' +
+      '</div>' +
+      '<div class="card green">' +
+        '<div class="card-number" id="rel-faturamento">R$ 0,00</div>' +
+        '<div class="card-label">Faturamento do mês</div>' +
+      '</div>' +
+      '<div class="card orange">' +
+        '<div class="card-number" id="rel-abertos">0</div>' +
+        '<div class="card-label">Pedidos em aberto</div>' +
+      '</div>' +
+      '<div class="card">' +
+        '<div class="card-number" id="rel-clientes">0</div>' +
+        '<div class="card-label">Clientes atendidos</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div id="relatorio-resultado" style="margin-top:20px">' +
+      '<div class="card">' +
+        '<strong style="font-size:15px">Relatórios prontos</strong>' +
+        '<p style="font-size:13px;color:#666;margin-top:8px">Escolha o mês e clique em <b>Buscar mês</b>. O mês atual também aparece aqui, mesmo antes de virar o mês.</p>' +
+      '</div>' +
+    '</div>';
+}
+
+function garantirTelaRelatoriosMensais(){
+  let page = document.getElementById('page-relatorios');
+
+  if(!page){
+    const main = document.querySelector('main') || document.querySelector('.main-content') || document.body;
+    page = document.createElement('div');
+    page.id = 'page-relatorios';
+    page.className = 'page';
+    main.appendChild(page);
+  }
+
+  if(!document.getElementById('relatorio-mes') || !document.getElementById('relatorio-resultado')){
+    page.innerHTML = htmlTelaRelatoriosMensais();
+  }
+
+  return page;
+}
+
+function abrirRelatoriosDireto(){
+  const page = garantirTelaRelatoriosMensais();
+
+  document.querySelectorAll('.page').forEach(function(p){
+    p.classList.remove('active');
+    if(p.id !== 'page-relatorios'){
+      p.style.display = '';
+    }
+  });
+
+  page.classList.add('active');
+  page.style.display = 'block';
+  page.style.visibility = 'visible';
+  page.style.opacity = '1';
+
+  const titulo = document.getElementById('topbar-title');
+  if(titulo){
+    titulo.textContent = 'Relatórios';
+  }
+
+  preencherCabecalhoRelatorio();
+
+  setTimeout(function(){
+    carregarRelatorioMensal();
+  }, 100);
+}
+
+
 let relatorioMensalAtual = null;
 
 function mesAtualRelatorio(){
@@ -8451,6 +8585,15 @@ async function carregarRelatorioMensal(){
       '</div>';
   }catch(e){
     console.error('Erro ao carregar relatório mensal:', e);
+    const alvo = document.getElementById('relatorio-resultado');
+    if(alvo){
+      alvo.innerHTML =
+        '<div class="card" style="border:1px solid #f44336;background:#fff5f5!important">' +
+          '<strong style="color:#b00020">Erro ao carregar relatório</strong>' +
+          '<p style="font-size:13px;color:#555;margin-top:8px">' + escapeRelatorio(e.message || 'Erro ao carregar relatório mensal') + '</p>' +
+          '<p style="font-size:12px;color:#777">Confira se você também substituiu o server.js dos relatórios e reiniciou o servidor.</p>' +
+        '</div>';
+    }
     toast(e.message || 'Erro ao carregar relatório mensal','error');
   }
 }
