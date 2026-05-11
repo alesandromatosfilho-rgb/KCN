@@ -1766,6 +1766,13 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
     <span class="menu-label">Novo Produto/Consultar Produto</span>
   </a>
 </li>
+
+<li class="menu-item" onclick="showPage('relatorios','Relatórios')">
+  <a class="menu-link">
+    <div class="menu-icon-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h18v2H3V3zm2 4h14v14H5V7zm3 3v8h2v-8H8zm4 3v5h2v-5h-2zm4-2v7h2v-7h-2z"/></svg></div>
+    <span class="menu-label">Relatórios</span>
+  </a>
+</li>
 </ul>
     </nav>
 
@@ -5410,24 +5417,51 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
   </div>
 
   <div class="page" id="page-relatorios">
-    <div class="page-header"><h2>Relatórios</h2></div>
+    <div class="page-header">
+      <h2>Relatórios Mensais</h2>
+      <button class="btn btn-primary" onclick="carregarRelatorioMensal()">Atualizar Relatório</button>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mês do relatório</label>
+          <input type="month" id="relatorio-mes"/>
+        </div>
+        <div class="form-group">
+          <label>Empresa</label>
+          <input type="text" id="relatorio-empresa-label" readonly/>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="carregarRelatorioMensal()">Buscar mês</button>
+        <button class="btn btn-secondary" onclick="definirMesAtualRelatorio(); carregarRelatorioMensal();">Mês atual</button>
+        <button class="btn btn-success" onclick="imprimirRelatorioMensal()">Imprimir relatório</button>
+      </div>
+      <p style="font-size:12px;color:#777;margin-top:10px">
+        O painel de bordo mostra somente o mês atual. Quando o mês vira, pedidos e faturamento zeram automaticamente no painel, mas os dados antigos continuam aqui nos relatórios.
+      </p>
+    </div>
+
     <div class="cards-grid">
-      <div class="card" style="cursor:pointer" onclick="relatorioVendas()">
-        <div style="font-size:32px;margin-bottom:8px">📊</div>
-        <div style="font-size:14px;font-weight:600;color:#333">Vendas por Período</div>
-        <div style="font-size:12px;color:#999;margin-top:4px">Resumo de pedidos e faturamento</div>
+      <div class="card">
+        <div class="card-number" id="rel-total-pedidos">0</div>
+        <div class="card-label">Pedidos no mês</div>
       </div>
-      <div class="card" style="cursor:pointer" onclick="relatorioClientes()">
-        <div style="font-size:32px;margin-bottom:8px">👥</div>
-        <div style="font-size:14px;font-weight:600;color:#333">Clientes por Cidade</div>
-        <div style="font-size:12px;color:#999;margin-top:4px">Distribuição geográfica de clientes</div>
+      <div class="card green">
+        <div class="card-number" id="rel-faturamento">R$ 0,00</div>
+        <div class="card-label">Faturamento do mês</div>
       </div>
-      <div class="card" style="cursor:pointer" onclick="relatorioProdutos()">
-        <div style="font-size:32px;margin-bottom:8px">📦</div>
-        <div style="font-size:14px;font-weight:600;color:#333">Estoque de Produtos</div>
-        <div style="font-size:12px;color:#999;margin-top:4px">Posição atual do estoque</div>
+      <div class="card orange">
+        <div class="card-number" id="rel-abertos">0</div>
+        <div class="card-label">Pedidos em aberto</div>
+      </div>
+      <div class="card">
+        <div class="card-number" id="rel-clientes">0</div>
+        <div class="card-label">Clientes atendidos</div>
       </div>
     </div>
+
     <div id="relatorio-resultado" style="margin-top:20px"></div>
   </div>
 
@@ -6650,6 +6684,7 @@ function showPage(id, titulo){
   if(id==='tabela-sleep') {}
   if(id==='produtos-tais') carregarProdutosTais();
   if(id==='assistencia') carregarAssistencias();
+  if(id==='relatorios') carregarRelatorioMensal();
 }
 
 
@@ -8236,65 +8271,217 @@ async function excluirEvento(id){
   catch{toast('Erro','error');}
 }
 
-async function relatorioVendas(){
-  const pedidos=await api('/api/pedidos');
-  const total=pedidos.reduce(function(a,p){return a+(p.total||0);},0);
-  const aprovados=pedidos.filter(function(p){return p.status==='aprovado'||p.status==='faturado';});
-  let rows='';
-  pedidos.forEach(function(p){rows+='<tr><td>'+p.numero+'</td><td>'+p.cliente_nome+'</td><td>'+formatData(p.data_pedido)+'</td><td>R$ '+formatMoeda(p.total)+'</td><td>'+badgeStatus(p.status)+'</td></tr>';});
-  document.getElementById('relatorio-resultado').innerHTML='<div class="card"><strong style="font-size:14px">Resumo de Vendas</strong><table style="margin-top:12px"><thead><tr><th>Número</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table><div style="margin-top:12px;font-weight:600">Total Geral: R$ '+formatMoeda(total)+' | Aprovados/Faturados: '+aprovados.length+'</div></div>';
+
+let relatorioMensalAtual = null;
+
+function mesAtualRelatorio(){
+  const hoje = new Date();
+  return hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
 }
 
-async function relatorioClientes(){
-  const clientes=await api('/api/clientes?empresa='+encodeURIComponent(empresaAtual));
-  const por_cidade={};
-  clientes.forEach(function(c){
-    const key=(c.cidade||'Não informado')+'/'+(c.estado||'');
-    por_cidade[key]=(por_cidade[key]||0)+1;
-  });
-  let rows='';
-  Object.entries(por_cidade).sort(function(a,b){return b[1]-a[1];}).forEach(function(entry){rows+='<tr><td>'+entry[0]+'</td><td>'+entry[1]+'</td></tr>';});
-  document.getElementById('relatorio-resultado').innerHTML='<div class="card"><strong style="font-size:14px">Clientes por Cidade</strong><table style="margin-top:12px"><thead><tr><th>Cidade/UF</th><th>Quantidade</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+function nomeEmpresaAtualRelatorio(){
+  if(empresaAtual === 'sleep') return 'Sleep Colchões';
+  if(empresaAtual === 'tais') return 'Thaís Móveis';
+  return 'ACP Indústria de Móveis';
 }
 
-async function relatorioProdutos(){
+function definirMesAtualRelatorio(){
+  const campo = document.getElementById('relatorio-mes');
+  if(campo && !campo.value){
+    campo.value = mesAtualRelatorio();
+  }else if(campo){
+    campo.value = mesAtualRelatorio();
+  }
+}
+
+function preencherCabecalhoRelatorio(){
+  const campoEmpresa = document.getElementById('relatorio-empresa-label');
+  if(campoEmpresa){
+    campoEmpresa.value = nomeEmpresaAtualRelatorio();
+  }
+
+  const campoMes = document.getElementById('relatorio-mes');
+  if(campoMes && !campoMes.value){
+    campoMes.value = mesAtualRelatorio();
+  }
+}
+
+function escapeRelatorio(valor){
+  return escapeHtmlProduto(valor || '-');
+}
+
+function textoItensRelatorio(itens){
+  if(!itens || !itens.length){
+    return '-';
+  }
+
+  return itens.map(function(i){
+    const produto = [
+      i.produto_codigo || '',
+      i.produto_nome || ''
+    ].filter(Boolean).join(' - ');
+
+    return escapeRelatorio(produto) + ' / Qtd: ' + escapeRelatorio(i.quantidade);
+  }).join('<br>');
+}
+
+async function carregarRelatorioMensal(){
+  preencherCabecalhoRelatorio();
+
+  const campoMes = document.getElementById('relatorio-mes');
+  const mes = campoMes ? campoMes.value : mesAtualRelatorio();
+
+  if(!mes){
+    toast('Selecione um mês para o relatório','error');
+    return;
+  }
+
   try{
-    const produtos = await obterProdutosEmpresaCompleta(empresaAtual);
-    let rows = '';
+    const dados = await api('/api/relatorios/mensal?empresa=' + encodeURIComponent(empresaAtual) + '&mes=' + encodeURIComponent(mes));
 
-    produtos.forEach(function(p){
-      rows += '<tr>' +
-        '<td><code>' + escapeHtmlProduto(p.codigo) + '</code></td>' +
-        '<td>' + escapeHtmlProduto(p.descricao) + '</td>' +
-        '<td>' + escapeHtmlProduto(p.unidade || 'UN') + '</td>' +
-        '<td style="color:' + (Number(p.estoque || 0) < 5 ? '#f44336' : '#388e3c') + ';font-weight:600">' + escapeHtmlProduto(p.estoque || 0) + '</td>' +
-        '<td>R$ ' + formatMoeda(p.preco_venda) + '</td>' +
-        '<td>' + botoesProdutoHtml(p) + '</td>' +
+    relatorioMensalAtual = dados;
+
+    document.getElementById('rel-total-pedidos').textContent = dados.resumo.totalPedidos || 0;
+    document.getElementById('rel-faturamento').textContent = 'R$ ' + formatMoeda(dados.resumo.faturamento || 0);
+    document.getElementById('rel-abertos').textContent = dados.resumo.pedidosAbertos || 0;
+    document.getElementById('rel-clientes').textContent = dados.resumo.clientesAtendidos || 0;
+
+    const pedidos = dados.pedidos || [];
+    const clientes = dados.clientes || [];
+
+    const linhasPedidos = pedidos.length ? pedidos.map(function(p){
+      const cidadeUf = [p.cliente_cidade || '', p.cliente_estado || ''].filter(Boolean).join('/');
+      return '<tr>' +
+        '<td><strong>' + escapeRelatorio(p.numero) + '</strong></td>' +
+        '<td>' + formatData(p.data_pedido) + '</td>' +
+        '<td>' + escapeRelatorio(p.cliente_nome) + '<br><small>' + escapeRelatorio(p.cliente_cnpj_cpf) + '</small></td>' +
+        '<td>' + escapeRelatorio(cidadeUf) + '</td>' +
+        '<td>' + escapeRelatorio(p.data_entrega) + '</td>' +
+        '<td>' + escapeRelatorio(p.frete) + '</td>' +
+        '<td>' + badgeStatus(p.status) + '</td>' +
+        '<td>R$ ' + formatMoeda(p.total) + '</td>' +
+        '<td style="min-width:260px">' + textoItensRelatorio(p.itens) + '</td>' +
       '</tr>';
-    });
+    }).join('') : '<tr><td colspan="9" class="empty-state"><p>Nenhum pedido neste mês</p></td></tr>';
+
+    const linhasClientes = clientes.length ? clientes.map(function(c){
+      const cidadeUf = [c.cidade || '', c.estado || ''].filter(Boolean).join('/');
+      return '<tr>' +
+        '<td>' + escapeRelatorio(c.razao_social) + '</td>' +
+        '<td>' + escapeRelatorio(c.cnpj_cpf) + '</td>' +
+        '<td>' + escapeRelatorio(cidadeUf) + '</td>' +
+        '<td>' + escapeRelatorio(c.telefone) + '</td>' +
+        '<td>' + escapeRelatorio(c.total_pedidos) + '</td>' +
+        '<td>R$ ' + formatMoeda(c.total_comprado) + '</td>' +
+      '</tr>';
+    }).join('') : '<tr><td colspan="6" class="empty-state"><p>Nenhum cliente atendido neste mês</p></td></tr>';
 
     document.getElementById('relatorio-resultado').innerHTML =
       '<div class="card">' +
-        '<strong style="font-size:14px">Posição de Estoque</strong>' +
-        '<table style="margin-top:12px">' +
-          '<thead>' +
-            '<tr>' +
-              '<th>Código</th>' +
-              '<th>Descrição</th>' +
-              '<th>Unidade</th>' +
-              '<th>Estoque</th>' +
-              '<th>Preço</th>' +
-              '<th>Ação</th>' +
-            '</tr>' +
-          '</thead>' +
-          '<tbody>' + rows + '</tbody>' +
-        '</table>' +
+        '<strong style="font-size:15px">Resumo do mês ' + escapeRelatorio(dados.mes) + '</strong>' +
+        '<div style="margin-top:8px;font-size:13px;color:#555;line-height:1.7">' +
+          '<b>Empresa:</b> ' + escapeRelatorio(nomeEmpresaAtualRelatorio()) + '<br>' +
+          '<b>Pedidos:</b> ' + escapeRelatorio(dados.resumo.totalPedidos) + ' | ' +
+          '<b>Abertos:</b> ' + escapeRelatorio(dados.resumo.pedidosAbertos) + ' | ' +
+          '<b>Aprovados:</b> ' + escapeRelatorio(dados.resumo.pedidosAprovados) + ' | ' +
+          '<b>Faturados:</b> ' + escapeRelatorio(dados.resumo.pedidosFaturados) + ' | ' +
+          '<b>Cancelados:</b> ' + escapeRelatorio(dados.resumo.pedidosCancelados) + '<br>' +
+          '<b>Faturamento:</b> R$ ' + formatMoeda(dados.resumo.faturamento || 0) +
+        '</div>' +
+      '</div>' +
+
+      '<div class="card" style="margin-top:16px">' +
+        '<strong style="font-size:15px">Pedidos do mês</strong>' +
+        '<div style="overflow:auto;margin-top:12px">' +
+          '<table>' +
+            '<thead>' +
+              '<tr>' +
+                '<th>Número</th>' +
+                '<th>Data</th>' +
+                '<th>Cliente / CPF-CNPJ</th>' +
+                '<th>Cidade</th>' +
+                '<th>Prazo</th>' +
+                '<th>Frete</th>' +
+                '<th>Status</th>' +
+                '<th>Total</th>' +
+                '<th>Itens</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + linhasPedidos + '</tbody>' +
+          '</table>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="card" style="margin-top:16px">' +
+        '<strong style="font-size:15px">Clientes atendidos no mês</strong>' +
+        '<div style="overflow:auto;margin-top:12px">' +
+          '<table>' +
+            '<thead>' +
+              '<tr>' +
+                '<th>Cliente</th>' +
+                '<th>CPF/CNPJ</th>' +
+                '<th>Cidade</th>' +
+                '<th>Telefone</th>' +
+                '<th>Pedidos</th>' +
+                '<th>Total comprado</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + linhasClientes + '</tbody>' +
+          '</table>' +
+        '</div>' +
       '</div>';
   }catch(e){
-    console.error('Erro no relatório de produtos:', e);
-    toast('Erro ao carregar relatório de produtos','error');
+    console.error('Erro ao carregar relatório mensal:', e);
+    toast(e.message || 'Erro ao carregar relatório mensal','error');
   }
 }
+
+function imprimirRelatorioMensal(){
+  if(!relatorioMensalAtual){
+    toast('Carregue um relatório antes de imprimir','error');
+    return;
+  }
+
+  const conteudo = document.getElementById('relatorio-resultado').innerHTML;
+  const janela = window.open('', '_blank');
+
+  if(!janela){
+    toast('O navegador bloqueou a janela de impressão','error');
+    return;
+  }
+
+  janela.document.open();
+  janela.document.write(
+    '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+    '<title>Relatório ' + escapeRelatorio(relatorioMensalAtual.mes) + '</title>' +
+    '<style>' +
+      'body{font-family:Arial,sans-serif;padding:24px;color:#222;font-size:12px}' +
+      'h1{font-size:20px;margin:0 0 8px}' +
+      '.topo{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #222;padding-bottom:12px;margin-bottom:16px}' +
+      '.topo img{max-height:55px;max-width:130px;object-fit:contain}' +
+      '.card{border:1px solid #ddd;border-radius:6px;padding:14px;margin-bottom:14px}' +
+      'table{width:100%;border-collapse:collapse;margin-top:8px}' +
+      'th,td{border:1px solid #ddd;padding:6px;text-align:left;vertical-align:top}' +
+      'th{background:#f0f0f0}' +
+      '.badge{padding:2px 6px;border-radius:10px;background:#eee}' +
+      '@media print{button{display:none}}' +
+    '</style></head><body>' +
+      '<div class="topo">' +
+        '<img src="logo.png" alt="KCN">' +
+        '<div><h1>Relatório Mensal</h1><div>' + escapeRelatorio(nomeEmpresaAtualRelatorio()) + ' - ' + escapeRelatorio(relatorioMensalAtual.mes) + '</div></div>' +
+      '</div>' +
+      conteudo +
+      '<script>window.onload=function(){setTimeout(function(){window.print();},500);};<\\/script>' +
+    '</body></html>'
+  );
+  janela.document.close();
+}
+
+// Compatibilidade com os cards antigos, caso algum botão antigo ainda chame essas funções.
+async function relatorioVendas(){ carregarRelatorioMensal(); }
+async function relatorioClientes(){ carregarRelatorioMensal(); }
+async function relatorioProdutos(){ carregarRelatorioMensal(); }
+
 
 function normalizarEmpresaFront(sigla){
   const e = String(sigla || 'acp')

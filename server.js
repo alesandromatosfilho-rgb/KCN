@@ -53,6 +53,32 @@ async function garantirColunaFretePedido() {
   await run(`ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS frete TEXT DEFAULT ''`);
 }
 
+function obterIntervaloMes(mes) {
+  const agora = new Date();
+  const mesSeguro = /^\d{4}-\d{2}$/.test(String(mes || ''))
+    ? String(mes)
+    : `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+
+  const [ano, mesNumero] = mesSeguro.split('-').map(Number);
+  const inicio = new Date(Date.UTC(ano, mesNumero - 1, 1, 0, 0, 0));
+  const fim = new Date(Date.UTC(ano, mesNumero, 1, 0, 0, 0));
+
+  return {
+    mes: mesSeguro,
+    inicio: inicio.toISOString().slice(0, 10),
+    fim: fim.toISOString().slice(0, 10)
+  };
+}
+
+function formatarMesReferencia(data) {
+  if (!data) return '';
+  const valor = String(data);
+  if (/^\d{4}-\d{2}/.test(valor)) {
+    return valor.slice(0, 7);
+  }
+  return '';
+}
+
 
 async function garantirColunasProdutos() {
   try {
@@ -193,6 +219,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
 
 app.get('/api/dashboard', auth, async (req, res) => {
   const empresa = normalizarEmpresa(req.query.empresa);
+  const { mes, inicio, fim } = obterIntervaloMes(req.query.mes);
 
   try {
     const clientes = await get(
@@ -202,25 +229,34 @@ app.get('/api/dashboard', auth, async (req, res) => {
       [empresa]
     );
 
+    // O painel de bordo mostra somente o mês atual.
+    // Quando o mês vira, pedidos e faturamento aparecem zerados automaticamente,
+    // mas os pedidos antigos continuam guardados nos relatórios.
     const pedidos = await get(
       `SELECT COUNT(*) as total 
        FROM pedidos 
-       WHERE empresa = ?`,
-      [empresa]
+       WHERE empresa = ?
+       AND data_pedido >= ?
+       AND data_pedido < ?`,
+      [empresa, inicio, fim]
     );
 
     const abertos = await get(
       `SELECT COUNT(*) as total 
        FROM pedidos 
-       WHERE status = 'aberto' AND empresa = ?`,
-      [empresa]
+       WHERE status = 'aberto' AND empresa = ?
+       AND data_pedido >= ?
+       AND data_pedido < ?`,
+      [empresa, inicio, fim]
     );
 
     const faturamento = await get(
       `SELECT COALESCE(SUM(total), 0) as total 
        FROM pedidos 
-       WHERE empresa = ?`,
-      [empresa]
+       WHERE empresa = ?
+       AND data_pedido >= ?
+       AND data_pedido < ?`,
+      [empresa, inicio, fim]
     );
 
     const ultimosPedidos = await query(
@@ -228,6 +264,8 @@ app.get('/api/dashboard', auth, async (req, res) => {
         p.id,
         p.numero,
         p.data_pedido,
+        p.data_entrega,
+        p.frete,
         p.total,
         p.status,
         p.cor,
@@ -235,12 +273,15 @@ app.get('/api/dashboard', auth, async (req, res) => {
        FROM pedidos p
        LEFT JOIN clientes c ON c.id = p.cliente_id
        WHERE p.empresa = ?
+       AND p.data_pedido >= ?
+       AND p.data_pedido < ?
        ORDER BY p.id DESC
        LIMIT 5`,
-      [empresa]
+      [empresa, inicio, fim]
     );
 
     res.json({
+      mesReferencia: mes,
       totalClientes: clientes?.total || 0,
       totalPedidos: pedidos?.total || 0,
       pedidosAbertos: abertos?.total || 0,
@@ -252,7 +293,139 @@ app.get('/api/dashboard', auth, async (req, res) => {
   }
 });
 
-// ─── CLIENTES ────────────────────────────────────────────────────────────────
+// ─── RELATÓRIOS MENSAIS ─────────────────────────────────────────────────────
+
+app.get('/api/relatorios/meses', auth, async (req, res) => {
+  const empresa = normalizarEmpresa(req.query.empresa);
+
+  try {
+    const rows = await query(
+      `SELECT DISTINCT SUBSTR(CAST(data_pedido AS TEXT), 1, 7) as mes
+       FROM pedidos
+       WHERE empresa = ?
+       AND data_pedido IS NOT NULL
+       ORDER BY mes DESC`,
+      [empresa]
+    );
+
+    res.json(rows.filter(r => r.mes).map(r => r.mes));
+  } catch (e) {
+    res.status(500).json({ erro: e.message });
+  }
+});
+
+app.get('/api/relatorios/mensal', auth, async (req, res) => {
+  const empresa = normalizarEmpresa(req.query.empresa);
+  const { mes, inicio, fim } = obterIntervaloMes(req.query.mes);
+
+  try {
+    await garantirColunaFretePedido();
+
+    const resumo = await get(
+      `SELECT 
+        COUNT(*) as total_pedidos,
+        COALESCE(SUM(total), 0) as faturamento,
+        SUM(CASE WHEN status = 'aberto' THEN 1 ELSE 0 END) as pedidos_abertos,
+        SUM(CASE WHEN status = 'aprovado' THEN 1 ELSE 0 END) as pedidos_aprovados,
+        SUM(CASE WHEN status = 'faturado' THEN 1 ELSE 0 END) as pedidos_faturados,
+        SUM(CASE WHEN status = 'cancelado' THEN 1 ELSE 0 END) as pedidos_cancelados,
+        COUNT(DISTINCT cliente_id) as clientes_atendidos
+       FROM pedidos
+       WHERE empresa = ?
+       AND data_pedido >= ?
+       AND data_pedido < ?`,
+      [empresa, inicio, fim]
+    );
+
+    const pedidos = await query(
+      `SELECT 
+        p.*,
+        c.razao_social as cliente_nome,
+        c.nome_fantasia as cliente_fantasia,
+        c.cnpj_cpf as cliente_cnpj_cpf,
+        c.endereco as cliente_endereco,
+        c.cidade as cliente_cidade,
+        c.estado as cliente_estado,
+        c.telefone as cliente_telefone,
+        c.email as cliente_email,
+        c.codigo_origem as cliente_codigo_origem
+       FROM pedidos p
+       LEFT JOIN clientes c ON c.id = p.cliente_id
+       WHERE p.empresa = ?
+       AND p.data_pedido >= ?
+       AND p.data_pedido < ?
+       ORDER BY p.data_pedido DESC, p.id DESC`,
+      [empresa, inicio, fim]
+    );
+
+    const itens = pedidos.length
+      ? await query(
+          `SELECT *
+           FROM pedido_itens
+           WHERE pedido_id IN (${pedidos.map(() => '?').join(',')})
+           ORDER BY pedido_id, id`,
+          pedidos.map(p => p.id)
+        )
+      : [];
+
+    const itensPorPedido = {};
+    itens.forEach(item => {
+      const key = String(item.pedido_id);
+      if (!itensPorPedido[key]) itensPorPedido[key] = [];
+      itensPorPedido[key].push(item);
+    });
+
+    const pedidosComItens = pedidos.map(p => ({
+      ...p,
+      itens: itensPorPedido[String(p.id)] || []
+    }));
+
+    const clientes = await query(
+      `SELECT 
+        c.id,
+        c.razao_social,
+        c.nome_fantasia,
+        c.cnpj_cpf,
+        c.cidade,
+        c.estado,
+        c.telefone,
+        c.email,
+        COUNT(p.id) as total_pedidos,
+        COALESCE(SUM(p.total), 0) as total_comprado
+       FROM pedidos p
+       LEFT JOIN clientes c ON c.id = p.cliente_id
+       WHERE p.empresa = ?
+       AND p.data_pedido >= ?
+       AND p.data_pedido < ?
+       GROUP BY c.id, c.razao_social, c.nome_fantasia, c.cnpj_cpf, c.cidade, c.estado, c.telefone, c.email
+       ORDER BY total_comprado DESC, c.razao_social`,
+      [empresa, inicio, fim]
+    );
+
+    res.json({
+      mes,
+      inicio,
+      fim,
+      resumo: {
+        totalPedidos: Number(resumo?.total_pedidos || 0),
+        faturamento: Number(resumo?.faturamento || 0),
+        pedidosAbertos: Number(resumo?.pedidos_abertos || 0),
+        pedidosAprovados: Number(resumo?.pedidos_aprovados || 0),
+        pedidosFaturados: Number(resumo?.pedidos_faturados || 0),
+        pedidosCancelados: Number(resumo?.pedidos_cancelados || 0),
+        clientesAtendidos: Number(resumo?.clientes_atendidos || 0)
+      },
+      pedidos: pedidosComItens,
+      clientes
+    });
+  } catch (e) {
+    console.error('Erro no relatório mensal:', e.message);
+    res.status(500).json({ erro: e.message });
+  }
+});
+
+
+// ─── CLIENTES ───────────────────────────────────────────────────────────────
 
 app.get('/api/clientes', auth, async (req, res) => {
   const busca = req.query.busca ? `%${req.query.busca}%` : '%';
