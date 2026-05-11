@@ -1646,6 +1646,30 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
  </style>
 
 <style>
+  #modal-pedido .modal{
+    max-height:92vh !important;
+    overflow-y:auto !important;
+  }
+
+  #modal-pedido .items-table{
+    min-width:760px;
+  }
+
+  #modal-pedido table.items-table tbody tr{
+    background:#fff;
+  }
+
+  #modal-pedido .modal-footer{
+    position:sticky;
+    bottom:0;
+    background:#fff;
+    padding-top:12px;
+    z-index:5;
+  }
+</style>
+
+
+<style>
   #page-relatorios,
   #page-relatorios.active,
   body #page-relatorios.active{
@@ -7323,9 +7347,11 @@ document.addEventListener('click', function(e){
 });
 let pedidoEditandoId = null;
 let pedidoEditandoEmpresa = null;
+let pedidoItemSeq = 0;
 async function abrirModalPedido(){
   pedidoEditandoId = null;
   pedidoEditandoEmpresa = null;
+  pedidoItemSeq = 0;
 
   if(document.getElementById('modal-pedido-titulo')){
     document.getElementById('modal-pedido-titulo').textContent = 'Novo Pedido';
@@ -7357,6 +7383,7 @@ async function abrirModalPedido(){
     }
 
     document.getElementById('tabela-itens').innerHTML = '';
+    pedidoItemSeq = 0;
     document.getElementById('ped-obs').value = '';
     document.getElementById('ped-entrega').value = '';
     if(document.getElementById('ped-frete')) document.getElementById('ped-frete').value = '';
@@ -7390,14 +7417,23 @@ function filtrarProdutosItem(idx, abrirLista){
     return;
   }
 
-  hidden.value = '';
-  hidden.dataset.codigo = '';
-  hidden.dataset.descricao = '';
-  hidden.dataset.preco = '';
-  hidden.dataset.origem = '';
-  hidden.dataset.idReal = '';
-
   const busca = normalizarTextoBuscaProduto(campo.value);
+  const textoSelecionado = normalizarTextoBuscaProduto(hidden.dataset.textoSelecionado || '');
+
+  // Antes o sistema limpava o produto selecionado até no foco do campo.
+  // Com muitos itens, isso fazia o pedido perder seleções e bloquear o salvamento.
+  if(textoSelecionado && busca === textoSelecionado){
+    // Mantém o produto selecionado.
+  }else if(!textoSelecionado || busca !== textoSelecionado){
+    hidden.value = '';
+    hidden.dataset.codigo = '';
+    hidden.dataset.descricao = '';
+    hidden.dataset.preco = '';
+    hidden.dataset.origem = '';
+    hidden.dataset.idReal = '';
+    hidden.dataset.textoSelecionado = '';
+  }
+
 
   let lista = produtosCache || [];
 
@@ -7462,6 +7498,7 @@ function selecionarProdutoItem(idx, ref){
     hidden.dataset.preco = preco;
     hidden.dataset.origem = produto._origem || '';
     hidden.dataset.idReal = produto._origem === 'api' ? String(produto.id || '') : '';
+    hidden.dataset.textoSelecionado = codigo + ' - ' + descricao;
   }
 
   if(campo){
@@ -7622,7 +7659,7 @@ document.addEventListener('click', function(e){
 });
 function adicionarItem(){
   const tbody = document.getElementById('tabela-itens');
-  const idx = tbody.children.length;
+  const idx = pedidoItemSeq++;
 
   const campoProduto =
     '<div class="produto-search-wrap">'+
@@ -7703,14 +7740,22 @@ function calcularTotalItem(idx){
 }
 
 function calcularTotalPedido(){
-  const rows=document.getElementById('tabela-itens').children;
-  let total=0;
-  for(let i=0;i<rows.length;i++){
-    const el=document.getElementById('item-total-'+i);
-    const txt=el&&el.textContent||'R$ 0';
-    total+=parseFloat(txt.replace('R$ ','').replace('.','').replace(',','.'))||0;
+  const rows = document.getElementById('tabela-itens').children;
+  let total = 0;
+
+  for(const row of rows){
+    const el = row.querySelector('[id^="item-total-"]');
+    const txt = el && el.textContent ? el.textContent : 'R$ 0';
+    const numero = String(txt)
+      .replace('R$', '')
+      .replace(/\s/g, '')
+      .replace(/\./g, '')
+      .replace(',', '.');
+
+    total += parseFloat(numero) || 0;
   }
-  document.getElementById('total-pedido').textContent=formatMoeda(total);
+
+  document.getElementById('total-pedido').textContent = formatMoeda(total);
 }
 async function carregarProdutosDaEmpresaAtual(){
   produtosCache = await obterProdutosEmpresaCompleta(empresaAtual);
@@ -7742,6 +7787,9 @@ function preencherItemPedidoEditado(item){
     produtoHidden.dataset.preco = item.preco_unitario || 0;
     produtoHidden.dataset.idReal = produtoId > 0 ? String(produtoId) : '';
     produtoHidden.dataset.origem = produtoId > 0 ? 'api' : 'editado';
+    produtoHidden.dataset.textoSelecionado = (codigoProduto || nomeProduto)
+      ? ((codigoProduto ? codigoProduto + ' - ' : '') + nomeProduto)
+      : '';
   }
 
   if(produtoBusca){
@@ -7910,20 +7958,6 @@ async function salvarPedido(){
     const produtoEl = tr.querySelector('input[type="hidden"][id^="item-produto-"]');
     const produtoBuscaEl = tr.querySelector('input[type="text"][id^="item-produto-busca-"]');
 
-    const temProdutoSelecionado =
-      produtoEl &&
-      (
-        produtoEl.value ||
-        produtoEl.dataset.codigo ||
-        produtoEl.dataset.descricao ||
-        (produtoBuscaEl && produtoBuscaEl.value)
-      );
-
-    if(!temProdutoSelecionado){
-      toast('Selecione um produto em todos os itens','error');
-      return;
-    }
-
     const qtdEl = tr.querySelector('input[id^="item-qtd-"]');
     const precoEl = tr.querySelector('input[id^="item-preco-"]');
     const descEl = tr.querySelector('input[id^="item-desc-"]');
@@ -7931,6 +7965,34 @@ async function salvarPedido(){
     const qtd = Number(qtdEl ? qtdEl.value : 0);
     const preco = Number(precoEl ? precoEl.value : 0);
     const desc = Number(descEl ? descEl.value : 0);
+
+    const textoProdutoDigitado = produtoBuscaEl && produtoBuscaEl.value ? produtoBuscaEl.value.trim() : '';
+
+    const temProdutoSelecionado =
+      produtoEl &&
+      (
+        produtoEl.value ||
+        produtoEl.dataset.codigo ||
+        produtoEl.dataset.descricao ||
+        textoProdutoDigitado
+      );
+
+    const linhaTotalmenteVazia =
+      !temProdutoSelecionado &&
+      (!qtd || qtd === 1) &&
+      (!preco || preco === 0) &&
+      (!desc || desc === 0);
+
+    // Se o cliente clicou em + Item sem querer e deixou a linha vazia,
+    // ignoramos essa linha para não travar o pedido com muitos itens.
+    if(linhaTotalmenteVazia){
+      continue;
+    }
+
+    if(!temProdutoSelecionado){
+      toast('Selecione um produto nos itens preenchidos','error');
+      return;
+    }
 
     if(!qtd || qtd <= 0){
       toast('Informe uma quantidade válida','error');
@@ -8005,6 +8067,11 @@ async function salvarPedido(){
     });
   }
 
+  if(!itens.length){
+    toast('Adicione pelo menos um produto válido','error');
+    return;
+  }
+
   try{
     const urlPedido = pedidoEditandoId
   ? '/api/pedidos/' + pedidoEditandoId
@@ -8014,16 +8081,29 @@ const metodoPedido = pedidoEditandoId
   ? 'PUT'
   : 'POST';
 
-await api(urlPedido, metodoPedido, {
-  cliente_id: cliente_id,
-  data_entrega: data_entrega,
-  frete: frete,
-  forma_pagamento: forma_pagamento,
-  observacao: observacao,
-  itens: itens,
-  empresa: pedidoEditandoEmpresa || empresaAtual,
-  cor: null
-});
+const btnSalvarPedido = document.getElementById('btn-salvar-pedido');
+if(btnSalvarPedido){
+  btnSalvarPedido.disabled = true;
+  btnSalvarPedido.textContent = pedidoEditandoId ? 'Salvando alterações...' : 'Criando pedido...';
+}
+
+try{
+  await api(urlPedido, metodoPedido, {
+    cliente_id: cliente_id,
+    data_entrega: data_entrega,
+    frete: frete,
+    forma_pagamento: forma_pagamento,
+    observacao: observacao,
+    itens: itens,
+    empresa: pedidoEditandoEmpresa || empresaAtual,
+    cor: null
+  });
+}finally{
+  if(btnSalvarPedido){
+    btnSalvarPedido.disabled = false;
+    btnSalvarPedido.textContent = pedidoEditandoId ? 'Salvar Alterações' : 'Criar Pedido';
+  }
+}
 
 toast(pedidoEditandoId ? 'Pedido atualizado com sucesso!' : 'Pedido criado com sucesso!');
 
