@@ -79,6 +79,42 @@ function formatarMesReferencia(data) {
   return '';
 }
 
+function somarDiasISO(dataISO, dias) {
+  const partes = String(dataISO || '').split('-').map(Number);
+  if (partes.length !== 3 || partes.some(isNaN)) {
+    return dataISO;
+  }
+
+  const data = new Date(Date.UTC(partes[0], partes[1] - 1, partes[2] + dias));
+  return data.toISOString().slice(0, 10);
+}
+
+function obterIntervaloRelatorio(queryParams) {
+  const dataInicio = String(queryParams.data_inicio || '').slice(0, 10);
+  const dataFim = String(queryParams.data_fim || '').slice(0, 10);
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dataInicio) && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) {
+    return {
+      mes: dataInicio.slice(0, 7),
+      inicio: dataInicio,
+      fim: somarDiasISO(dataFim, 1),
+      dataInicio,
+      dataFim,
+      label: dataInicio + ' até ' + dataFim
+    };
+  }
+
+  const intervaloMes = obterIntervaloMes(queryParams.mes);
+  return {
+    mes: intervaloMes.mes,
+    inicio: intervaloMes.inicio,
+    fim: intervaloMes.fim,
+    dataInicio: intervaloMes.inicio,
+    dataFim: somarDiasISO(intervaloMes.fim, -1),
+    label: intervaloMes.mes
+  };
+}
+
 
 async function garantirColunasProdutos() {
   try {
@@ -316,7 +352,8 @@ app.get('/api/relatorios/meses', auth, async (req, res) => {
 
 app.get('/api/relatorios/mensal', auth, async (req, res) => {
   const empresa = normalizarEmpresa(req.query.empresa);
-  const { mes, inicio, fim } = obterIntervaloMes(req.query.mes);
+  const intervalo = obterIntervaloRelatorio(req.query);
+  const { mes, inicio, fim, dataInicio, dataFim, label } = intervalo;
 
   try {
     await garantirColunaFretePedido();
@@ -403,9 +440,15 @@ app.get('/api/relatorios/mensal', auth, async (req, res) => {
     );
 
     res.json({
+      empresa,
       mes,
       inicio,
       fim,
+      periodo: {
+        inicio: dataInicio,
+        fim: dataFim,
+        label
+      },
       resumo: {
         totalPedidos: Number(resumo?.total_pedidos || 0),
         faturamento: Number(resumo?.faturamento || 0),

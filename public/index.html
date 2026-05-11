@@ -9266,6 +9266,350 @@ function abrirRelatoriosDireto(){
   }, 100);
 }
 
+
+
+/* Relatórios v5: empresa selecionável, data inicial/final e valores reais */
+function dataISOHojeRelatorio(){
+  const hoje = new Date();
+  return hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0') + '-' + String(hoje.getDate()).padStart(2, '0');
+}
+
+function primeiroDiaMesAtualRelatorio(){
+  const hoje = new Date();
+  return hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0') + '-01';
+}
+
+function ultimoDiaMesAtualRelatorio(){
+  const hoje = new Date();
+  const ultimo = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+  return ultimo.getFullYear() + '-' + String(ultimo.getMonth() + 1).padStart(2, '0') + '-' + String(ultimo.getDate()).padStart(2, '0');
+}
+
+function nomeEmpresaRelatorio(empresa){
+  const e = normalizarEmpresaFront(empresa || empresaAtual);
+
+  if(e === 'sleep'){
+    return 'Sleep Colchões';
+  }
+
+  if(e === 'tais'){
+    return 'Thaís Móveis';
+  }
+
+  return 'ACP Indústria de Móveis';
+}
+
+function empresaSelecionadaRelatorio(){
+  const sel = document.getElementById('relatorio-empresa-select');
+  return normalizarEmpresaFront(sel && sel.value ? sel.value : empresaAtual);
+}
+
+function htmlRelatoriosFlutuante(){
+  return '' +
+    '<div id="relatorios-flutuante" style="position:fixed;left:220px;top:78px;right:24px;bottom:24px;z-index:99999;background:rgba(255,255,255,.98);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:auto;padding:24px;color:#222">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;border-bottom:1px solid #ddd;padding-bottom:12px">' +
+        '<div>' +
+          '<h2 style="margin:0;font-size:22px;color:#222">Relatórios Mensais</h2>' +
+          '<p style="margin:6px 0 0;font-size:13px;color:#666">Consulte pedidos, faturamento e clientes por empresa e período.</p>' +
+        '</div>' +
+        '<button class="btn btn-secondary" onclick="fecharRelatoriosFlutuante()">Fechar</button>' +
+      '</div>' +
+
+      '<div class="card" style="margin-bottom:16px;background:#fff!important;color:#222!important">' +
+        '<div class="form-row">' +
+          '<div class="form-group">' +
+            '<label>Empresa</label>' +
+            '<select id="relatorio-empresa-select" onchange="carregarRelatorioMensal()">' +
+              '<option value="acp">ACP Indústria de Móveis</option>' +
+              '<option value="sleep">Sleep Colchões</option>' +
+              '<option value="tais">Thaís Móveis</option>' +
+            '</select>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label>Data inicial</label>' +
+            '<input type="date" id="relatorio-data-inicio"/>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label>Data final</label>' +
+            '<input type="date" id="relatorio-data-fim"/>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+          '<button class="btn btn-primary" onclick="carregarRelatorioMensal()">Buscar período</button>' +
+          '<button class="btn btn-secondary" onclick="definirMesAtualRelatorio(); carregarRelatorioMensal();">Mês atual</button>' +
+          '<button class="btn btn-success" onclick="imprimirRelatorioMensal()">Imprimir relatório</button>' +
+        '</div>' +
+        '<p style="font-size:12px;color:#777;margin-top:10px">' +
+          'O painel de bordo mostra somente o mês atual. Quando o mês vira, pedidos e faturamento zeram automaticamente no painel, mas os dados antigos continuam aqui nos relatórios.' +
+        '</p>' +
+      '</div>' +
+
+      '<div class="cards-grid">' +
+        '<div class="card" style="background:#fff!important;color:#222!important">' +
+          '<div class="card-number" id="rel-total-pedidos">0</div>' +
+          '<div class="card-label">Pedidos no período</div>' +
+        '</div>' +
+        '<div class="card green" style="background:#fff!important;color:#222!important">' +
+          '<div class="card-number" id="rel-faturamento">R$ 0,00</div>' +
+          '<div class="card-label">Faturamento do período</div>' +
+        '</div>' +
+        '<div class="card orange" style="background:#fff!important;color:#222!important">' +
+          '<div class="card-number" id="rel-abertos">0</div>' +
+          '<div class="card-label">Pedidos em aberto</div>' +
+        '</div>' +
+        '<div class="card" style="background:#fff!important;color:#222!important">' +
+          '<div class="card-number" id="rel-clientes">0</div>' +
+          '<div class="card-label">Clientes atendidos</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div id="relatorio-resultado" style="margin-top:20px">' +
+        '<div class="card" style="background:#fff!important;color:#222!important">' +
+          '<strong style="font-size:15px">Relatórios prontos</strong>' +
+          '<p style="font-size:13px;color:#666;margin-top:8px">Escolha a empresa e o período, depois clique em <b>Buscar período</b>.</p>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+function definirMesAtualRelatorio(){
+  const inicio = document.getElementById('relatorio-data-inicio');
+  const fim = document.getElementById('relatorio-data-fim');
+
+  if(inicio){
+    inicio.value = primeiroDiaMesAtualRelatorio();
+  }
+
+  if(fim){
+    fim.value = ultimoDiaMesAtualRelatorio();
+  }
+}
+
+function preencherCabecalhoRelatorio(){
+  const selEmpresa = document.getElementById('relatorio-empresa-select');
+
+  if(selEmpresa){
+    selEmpresa.value = normalizarEmpresaFront(empresaAtual);
+  }
+
+  const inicio = document.getElementById('relatorio-data-inicio');
+  const fim = document.getElementById('relatorio-data-fim');
+
+  if(inicio && !inicio.value){
+    inicio.value = primeiroDiaMesAtualRelatorio();
+  }
+
+  if(fim && !fim.value){
+    fim.value = ultimoDiaMesAtualRelatorio();
+  }
+}
+
+function abrirRelatoriosDireto(){
+  const antigo = document.getElementById('relatorios-flutuante');
+  if(antigo){
+    antigo.remove();
+  }
+
+  document.body.insertAdjacentHTML('beforeend', htmlRelatoriosFlutuante());
+
+  const titulo = document.getElementById('topbar-title');
+  if(titulo){
+    titulo.textContent = 'Relatórios';
+  }
+
+  preencherCabecalhoRelatorio();
+
+  setTimeout(function(){
+    carregarRelatorioMensal();
+  }, 100);
+}
+
+async function carregarRelatorioMensal(){
+  const empresa = empresaSelecionadaRelatorio();
+
+  const inicioEl = document.getElementById('relatorio-data-inicio');
+  const fimEl = document.getElementById('relatorio-data-fim');
+
+  const dataInicio = inicioEl && inicioEl.value ? inicioEl.value : primeiroDiaMesAtualRelatorio();
+  const dataFim = fimEl && fimEl.value ? fimEl.value : ultimoDiaMesAtualRelatorio();
+
+  if(inicioEl && !inicioEl.value){
+    inicioEl.value = dataInicio;
+  }
+
+  if(fimEl && !fimEl.value){
+    fimEl.value = dataFim;
+  }
+
+  if(dataInicio > dataFim){
+    toast('A data inicial não pode ser maior que a data final','error');
+    return;
+  }
+
+  try{
+    const dados = await api(
+      '/api/relatorios/mensal?empresa=' + encodeURIComponent(empresa) +
+      '&data_inicio=' + encodeURIComponent(dataInicio) +
+      '&data_fim=' + encodeURIComponent(dataFim)
+    );
+
+    relatorioMensalAtual = dados;
+
+    document.getElementById('rel-total-pedidos').textContent = dados.resumo.totalPedidos || 0;
+    document.getElementById('rel-faturamento').textContent = 'R$ ' + formatMoeda(dados.resumo.faturamento || 0);
+    document.getElementById('rel-abertos').textContent = dados.resumo.pedidosAbertos || 0;
+    document.getElementById('rel-clientes').textContent = dados.resumo.clientesAtendidos || 0;
+
+    const pedidos = dados.pedidos || [];
+    const clientes = dados.clientes || [];
+
+    const linhasPedidos = pedidos.length ? pedidos.map(function(p){
+      const cidadeUf = [p.cliente_cidade || '', p.cliente_estado || ''].filter(Boolean).join('/');
+      return '<tr>' +
+        '<td><strong>' + escapeRelatorio(p.numero) + '</strong></td>' +
+        '<td>' + formatData(p.data_pedido) + '</td>' +
+        '<td>' + escapeRelatorio(p.cliente_nome) + '<br><small>' + escapeRelatorio(p.cliente_cnpj_cpf) + '</small></td>' +
+        '<td>' + escapeRelatorio(cidadeUf) + '</td>' +
+        '<td>' + escapeRelatorio(p.data_entrega) + '</td>' +
+        '<td>' + escapeRelatorio(p.frete) + '</td>' +
+        '<td>' + badgeStatus(p.status) + '</td>' +
+        '<td>R$ ' + formatMoeda(p.total) + '</td>' +
+        '<td style="min-width:260px">' + textoItensRelatorio(p.itens) + '</td>' +
+      '</tr>';
+    }).join('') : '<tr><td colspan="9" class="empty-state"><p>Nenhum pedido nesse período para esta empresa</p></td></tr>';
+
+    const linhasClientes = clientes.length ? clientes.map(function(c){
+      const cidadeUf = [c.cidade || '', c.estado || ''].filter(Boolean).join('/');
+      return '<tr>' +
+        '<td>' + escapeRelatorio(c.razao_social) + '</td>' +
+        '<td>' + escapeRelatorio(c.cnpj_cpf) + '</td>' +
+        '<td>' + escapeRelatorio(cidadeUf) + '</td>' +
+        '<td>' + escapeRelatorio(c.telefone) + '</td>' +
+        '<td>' + escapeRelatorio(c.total_pedidos) + '</td>' +
+        '<td>R$ ' + formatMoeda(c.total_comprado) + '</td>' +
+      '</tr>';
+    }).join('') : '<tr><td colspan="6" class="empty-state"><p>Nenhum cliente atendido nesse período</p></td></tr>';
+
+    const labelPeriodo = dados.periodo && dados.periodo.label ? dados.periodo.label : (dataInicio + ' até ' + dataFim);
+
+    document.getElementById('relatorio-resultado').innerHTML =
+      '<div class="card" style="background:#fff!important;color:#222!important">' +
+        '<strong style="font-size:15px">Resumo do período</strong>' +
+        '<div style="margin-top:8px;font-size:13px;color:#555;line-height:1.7">' +
+          '<b>Empresa:</b> ' + escapeRelatorio(nomeEmpresaRelatorio(empresa)) + '<br>' +
+          '<b>Período:</b> ' + escapeRelatorio(labelPeriodo) + '<br>' +
+          '<b>Pedidos:</b> ' + escapeRelatorio(dados.resumo.totalPedidos) + ' | ' +
+          '<b>Abertos:</b> ' + escapeRelatorio(dados.resumo.pedidosAbertos) + ' | ' +
+          '<b>Aprovados:</b> ' + escapeRelatorio(dados.resumo.pedidosAprovados) + ' | ' +
+          '<b>Faturados:</b> ' + escapeRelatorio(dados.resumo.pedidosFaturados) + ' | ' +
+          '<b>Cancelados:</b> ' + escapeRelatorio(dados.resumo.pedidosCancelados) + '<br>' +
+          '<b>Faturamento:</b> R$ ' + formatMoeda(dados.resumo.faturamento || 0) +
+        '</div>' +
+      '</div>' +
+
+      '<div class="card" style="margin-top:16px;background:#fff!important;color:#222!important">' +
+        '<strong style="font-size:15px">Pedidos do período</strong>' +
+        '<div style="overflow:auto;margin-top:12px">' +
+          '<table>' +
+            '<thead>' +
+              '<tr>' +
+                '<th>Número</th>' +
+                '<th>Data</th>' +
+                '<th>Cliente / CPF-CNPJ</th>' +
+                '<th>Cidade</th>' +
+                '<th>Prazo</th>' +
+                '<th>Frete</th>' +
+                '<th>Status</th>' +
+                '<th>Total</th>' +
+                '<th>Itens</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + linhasPedidos + '</tbody>' +
+          '</table>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="card" style="margin-top:16px;background:#fff!important;color:#222!important">' +
+        '<strong style="font-size:15px">Clientes atendidos no período</strong>' +
+        '<div style="overflow:auto;margin-top:12px">' +
+          '<table>' +
+            '<thead>' +
+              '<tr>' +
+                '<th>Cliente</th>' +
+                '<th>CPF/CNPJ</th>' +
+                '<th>Cidade</th>' +
+                '<th>Telefone</th>' +
+                '<th>Pedidos</th>' +
+                '<th>Total comprado</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + linhasClientes + '</tbody>' +
+          '</table>' +
+        '</div>' +
+      '</div>';
+  }catch(e){
+    console.error('Erro ao carregar relatório mensal:', e);
+    const alvo = document.getElementById('relatorio-resultado');
+
+    if(alvo){
+      alvo.innerHTML =
+        '<div class="card" style="border:1px solid #f44336;background:#fff5f5!important">' +
+          '<strong style="color:#b00020">Erro ao carregar relatório</strong>' +
+          '<p style="font-size:13px;color:#555;margin-top:8px">' + escapeRelatorio(e.message || 'Erro ao carregar relatório mensal') + '</p>' +
+          '<p style="font-size:12px;color:#777">Confira se você também substituiu o server.js dos relatórios e reiniciou o servidor.</p>' +
+        '</div>';
+    }
+
+    toast(e.message || 'Erro ao carregar relatório mensal','error');
+  }
+}
+
+function imprimirRelatorioMensal(){
+  if(!relatorioMensalAtual){
+    toast('Carregue um relatório antes de imprimir','error');
+    return;
+  }
+
+  const empresa = empresaSelecionadaRelatorio();
+  const conteudo = document.getElementById('relatorio-resultado').innerHTML;
+  const janela = window.open('', '_blank');
+
+  if(!janela){
+    toast('O navegador bloqueou a janela de impressão','error');
+    return;
+  }
+
+  const periodo = relatorioMensalAtual.periodo && relatorioMensalAtual.periodo.label
+    ? relatorioMensalAtual.periodo.label
+    : '';
+
+  janela.document.open();
+  janela.document.write(
+    '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+    '<title>Relatório ' + escapeRelatorio(periodo) + '</title>' +
+    '<style>' +
+      'body{font-family:Arial,sans-serif;padding:24px;color:#222;font-size:12px}' +
+      'h1{font-size:20px;margin:0 0 8px}' +
+      '.topo{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #222;padding-bottom:12px;margin-bottom:16px}' +
+      '.topo img{max-height:55px;max-width:130px;object-fit:contain}' +
+      '.card{border:1px solid #ddd;border-radius:6px;padding:14px;margin-bottom:14px}' +
+      'table{width:100%;border-collapse:collapse;margin-top:8px}' +
+      'th,td{border:1px solid #ddd;padding:6px;text-align:left;vertical-align:top}' +
+      'th{background:#f0f0f0}' +
+      '.badge{padding:2px 6px;border-radius:10px;background:#eee}' +
+      '@media print{button{display:none}}' +
+    '</style></head><body>' +
+      '<div class="topo">' +
+        '<img src="logo.png" alt="KCN">' +
+        '<div><h1>Relatório do Período</h1><div>' + escapeRelatorio(nomeEmpresaRelatorio(empresa)) + ' - ' + escapeRelatorio(periodo) + '</div></div>' +
+      '</div>' +
+      conteudo +
+      '<script>window.onload=function(){setTimeout(function(){window.print();},500);};<\\/script>' +
+    '</body></html>'
+  );
+  janela.document.close();
+}
+
 </script>
 </body>
 </html>
