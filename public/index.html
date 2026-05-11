@@ -7322,8 +7322,10 @@ document.addEventListener('click', function(e){
   }
 });
 let pedidoEditandoId = null;
+let pedidoEditandoEmpresa = null;
 async function abrirModalPedido(){
   pedidoEditandoId = null;
+  pedidoEditandoEmpresa = null;
 
   if(document.getElementById('modal-pedido-titulo')){
     document.getElementById('modal-pedido-titulo').textContent = 'Novo Pedido';
@@ -7358,6 +7360,7 @@ async function abrirModalPedido(){
     document.getElementById('ped-obs').value = '';
     document.getElementById('ped-entrega').value = '';
     if(document.getElementById('ped-frete')) document.getElementById('ped-frete').value = '';
+    if(document.getElementById('ped-cliente')) document.getElementById('ped-cliente').dataset.originalId = '';
     if(document.getElementById('ped-forma-pagamento')) document.getElementById('ped-forma-pagamento').value = '';
     document.getElementById('total-pedido').textContent = '0,00';
 
@@ -7726,15 +7729,25 @@ function preencherItemPedidoEditado(item){
   const precoEl = document.getElementById('item-preco-' + idx);
   const descEl = document.getElementById('item-desc-' + idx);
 
+  const codigoProduto = item.produto_codigo || '';
+  const nomeProduto = item.produto_nome || '';
+  const produtoId = Number(item.produto_id || 0);
+
   if(produtoHidden){
-    produtoHidden.value = item.produto_id || '';
-    produtoHidden.dataset.codigo = item.produto_codigo || '';
-    produtoHidden.dataset.descricao = item.produto_nome || '';
+    // Antes, quando produto_id vinha 0 ou vazio, o sistema achava que não tinha produto selecionado.
+    // Agora, se não tiver produto_id, usamos o código/nome como referência segura para edição.
+    produtoHidden.value = produtoId > 0 ? String(produtoId) : (codigoProduto || nomeProduto || ('editado-' + idx));
+    produtoHidden.dataset.codigo = codigoProduto;
+    produtoHidden.dataset.descricao = nomeProduto;
     produtoHidden.dataset.preco = item.preco_unitario || 0;
+    produtoHidden.dataset.idReal = produtoId > 0 ? String(produtoId) : '';
+    produtoHidden.dataset.origem = produtoId > 0 ? 'api' : 'editado';
   }
 
   if(produtoBusca){
-    produtoBusca.value = (item.produto_codigo || '') + ' - ' + (item.produto_nome || '');
+    produtoBusca.value = (codigoProduto || nomeProduto)
+      ? ((codigoProduto ? codigoProduto + ' - ' : '') + nomeProduto)
+      : '';
   }
 
   if(qtdEl){
@@ -7749,9 +7762,31 @@ function preencherItemPedidoEditado(item){
     descEl.value = item.desconto || 0;
   }
 
+  // ACP/Sleep usam item-cor-X. Thaís usa dois campos: tubular e estofado.
+  const corTexto = item.cor_item || '';
+
   const corEl = document.getElementById('item-cor-' + idx);
   if(corEl){
-    corEl.value = item.cor_item || '';
+    corEl.value = corTexto;
+  }
+
+  const tubularEl = document.getElementById('item-cor-tubular-' + idx);
+  const estofadoEl = document.getElementById('item-cor-estofado-' + idx);
+
+  if(tubularEl || estofadoEl){
+    const partes = String(corTexto).split('|').map(function(p){ return p.trim(); });
+
+    partes.forEach(function(parte){
+      const lower = parte.toLowerCase();
+
+      if(tubularEl && lower.indexOf('tubular:') === 0){
+        tubularEl.value = parte.replace(/tubular:/i, '').trim();
+      }
+
+      if(estofadoEl && lower.indexOf('estofado:') === 0){
+        estofadoEl.value = parte.replace(/estofado:/i, '').trim();
+      }
+    });
   }
 
   calcularTotalItem(idx);
@@ -7767,10 +7802,20 @@ async function abrirModalEditarPedido(id){
 
     const pedido = await api('/api/pedidos/' + id);
 
+    pedidoEditandoEmpresa = normalizarEmpresaFront(pedido.empresa || empresaAtual);
+
+    // Se por algum motivo o pedido for de outra empresa, carrega os produtos/clientes dessa empresa
+    // para não misturar ACP, Sleep e Thaís na edição.
+    if(pedidoEditandoEmpresa && pedidoEditandoEmpresa !== empresaAtual){
+      produtosCache = await obterProdutosEmpresaCompleta(pedidoEditandoEmpresa);
+      clientesPedidoCache = await api('/api/clientes?empresa=' + encodeURIComponent(pedidoEditandoEmpresa));
+    }
+
     document.getElementById('modal-pedido-titulo').textContent = 'Editar Pedido ' + pedido.numero;
     document.getElementById('btn-salvar-pedido').textContent = 'Salvar Alterações';
 
-    document.getElementById('ped-cliente').value = pedido.cliente_id;
+    document.getElementById('ped-cliente').value = pedido.cliente_id || '';
+    document.getElementById('ped-cliente').dataset.originalId = pedido.cliente_id || '';
 
     const campoCliente =
       document.getElementById('ped-cliente-busca') ||
@@ -7836,6 +7881,11 @@ async function salvarPedido(){
     }
   }
 
+  if(!cliente_id && pedidoEditandoId && clienteHidden && clienteHidden.dataset.originalId){
+    cliente_id = clienteHidden.dataset.originalId;
+    clienteHidden.value = cliente_id;
+  }
+
   if(!cliente_id){
     toast('Selecione um cliente','error');
     return;
@@ -7860,7 +7910,16 @@ async function salvarPedido(){
     const produtoEl = tr.querySelector('input[type="hidden"][id^="item-produto-"]');
     const produtoBuscaEl = tr.querySelector('input[type="text"][id^="item-produto-busca-"]');
 
-    if(!produtoEl || !produtoEl.value){
+    const temProdutoSelecionado =
+      produtoEl &&
+      (
+        produtoEl.value ||
+        produtoEl.dataset.codigo ||
+        produtoEl.dataset.descricao ||
+        (produtoBuscaEl && produtoBuscaEl.value)
+      );
+
+    if(!temProdutoSelecionado){
       toast('Selecione um produto em todos os itens','error');
       return;
     }
@@ -7920,6 +7979,10 @@ async function salvarPedido(){
       produtoNome = produtoNome || partesProduto.slice(1).join(' - ') || textoProduto;
     }
 
+    if(!produtoEl.value && (produtoCodigo || produtoNome)){
+      produtoEl.value = produtoCodigo || produtoNome;
+    }
+
     let produtoIdParaBanco = 0;
     const refProdutoSelecionado = String(produtoEl.value || '');
 
@@ -7958,13 +8021,14 @@ await api(urlPedido, metodoPedido, {
   forma_pagamento: forma_pagamento,
   observacao: observacao,
   itens: itens,
-  empresa: empresaAtual,
+  empresa: pedidoEditandoEmpresa || empresaAtual,
   cor: null
 });
 
 toast(pedidoEditandoId ? 'Pedido atualizado com sucesso!' : 'Pedido criado com sucesso!');
 
 pedidoEditandoId = null;
+pedidoEditandoEmpresa = null;
 
 fecharModal('modal-pedido');
 carregarPedidos();
