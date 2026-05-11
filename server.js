@@ -49,6 +49,10 @@ function normalizarEmpresa(empresa) {
   return 'acp';
 }
 
+async function garantirColunaFretePedido() {
+  await run(`ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS frete TEXT DEFAULT ''`);
+}
+
 
 async function garantirColunasProdutos() {
   try {
@@ -632,6 +636,7 @@ app.post('/api/pedidos', auth, async (req, res) => {
   const {
     cliente_id,
     data_entrega,
+    frete,
     observacao,
     itens,
     empresa,
@@ -652,18 +657,21 @@ const emp = normalizarEmpresa(empresa);
   }, 0);
 
   try {
+    await garantirColunaFretePedido();
+
     const numeroTemporario =
       'TEMP-PED-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
 
     const r = await run(
       `INSERT INTO pedidos 
-      (numero, cliente_id, vendedor_id, data_entrega, observacao, total, empresa, cor) 
-      VALUES (?,?,?,?,?,?,?,?)`,
+      (numero, cliente_id, vendedor_id, data_entrega, frete, observacao, total, empresa, cor) 
+      VALUES (?,?,?,?,?,?,?,?,?)`,
       [
         numeroTemporario,
         cliente_id,
         req.usuario.id,
         data_entrega || '',
+        frete || '',
         observacao || '',
         total,
         emp,
@@ -718,6 +726,7 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
   const {
     cliente_id,
     data_entrega,
+    frete,
     observacao,
     itens,
     empresa,
@@ -740,6 +749,8 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
   }, 0);
 
   try {
+    await garantirColunaFretePedido();
+
     const pedido = await get(
       'SELECT id FROM pedidos WHERE id = ? AND empresa = ?',
       [pedidoId, emp]
@@ -753,6 +764,7 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
       `UPDATE pedidos
        SET cliente_id = ?,
            data_entrega = ?,
+           frete = ?,
            observacao = ?,
            total = ?,
            empresa = ?,
@@ -761,6 +773,7 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
       [
         cliente_id,
         data_entrega || '',
+        frete || '',
         observacao || '',
         total,
         emp,

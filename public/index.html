@@ -5487,6 +5487,13 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
       </div>
     </div>
 
+    <div class="form-row">
+      <div class="form-group">
+        <label>Frete</label>
+        <input id="ped-frete" type="text" placeholder="Ex: CIF, FOB, R$ 100,00 ou a combinar"/>
+      </div>
+    </div>
+
     <div class="form-group">
       <label>Observação</label>
       <textarea id="ped-obs" rows="2" style="resize:none"></textarea>
@@ -7278,6 +7285,7 @@ async function abrirModalPedido(){
     document.getElementById('tabela-itens').innerHTML = '';
     document.getElementById('ped-obs').value = '';
     document.getElementById('ped-entrega').value = '';
+    if(document.getElementById('ped-frete')) document.getElementById('ped-frete').value = '';
     document.getElementById('total-pedido').textContent = '0,00';
 
     abrirModal('modal-pedido');
@@ -7700,6 +7708,7 @@ async function abrirModalEditarPedido(id){
     }
 
     document.getElementById('ped-entrega').value = pedido.data_entrega || '';
+    if(document.getElementById('ped-frete')) document.getElementById('ped-frete').value = pedido.frete || '';
     document.getElementById('ped-obs').value = pedido.observacao || '';
     document.getElementById('tabela-itens').innerHTML = '';
     document.getElementById('total-pedido').textContent = '0,00';
@@ -7759,6 +7768,7 @@ async function salvarPedido(){
   }
 
   const data_entrega = document.getElementById('ped-entrega').value || '';
+  const frete = document.getElementById('ped-frete') ? document.getElementById('ped-frete').value : '';
   const observacao = document.getElementById('ped-obs').value || '';
 
   const tbody = document.getElementById('tabela-itens');
@@ -7869,6 +7879,7 @@ const metodoPedido = pedidoEditandoId
 await api(urlPedido, metodoPedido, {
   cliente_id: cliente_id,
   data_entrega: data_entrega,
+  frete: frete,
   observacao: observacao,
   itens: itens,
   empresa: empresaAtual,
@@ -7918,6 +7929,15 @@ function juntarEnderecoPedido(p){
   return partes.join(' - ') || '-';
 }
 
+function juntarCidadePedido(p){
+  const cidadeUf = [
+    p.cliente_cidade || '',
+    p.cliente_estado || ''
+  ].filter(Boolean).join('/');
+
+  return cidadeUf || '-';
+}
+
 function nomeEmpresaPedido(empresa){
   const e = normalizarEmpresaFront(empresa || empresaAtual);
 
@@ -7954,18 +7974,18 @@ async function verPedido(id){
 
     document.getElementById('detalhe-numero').textContent = p.numero;
 
-    const enderecoCliente = juntarEnderecoPedido(p);
+    const cidadeCliente = juntarCidadePedido(p);
 
     document.getElementById('detalhe-info').innerHTML =
       '<b>Cliente:</b> ' + valorPedidoSeguro(p.cliente_nome) +
       '<br><b>CPF/CNPJ:</b> ' + valorPedidoSeguro(p.cliente_cnpj_cpf) +
-      '<br><b>Endereço:</b> ' + valorPedidoSeguro(enderecoCliente) +
+      '<br><b>Cidade:</b> ' + valorPedidoSeguro(cidadeCliente) +
       '<br><b>Telefone:</b> ' + valorPedidoSeguro(p.cliente_telefone) +
       '<br><b>Email:</b> ' + valorPedidoSeguro(p.cliente_email) +
       '<br><b>Data:</b> ' + formatData(p.data_pedido) +
       '<br><b>Prazo:</b> ' + (p.data_entrega || '-') +
       (p.cor ? '<br><b>Cor:</b> ' + valorPedidoSeguro(p.cor) : '') +
-      '<br><b>Status:</b> ' + badgeStatus(p.status) +
+      '<br><b>Frete:</b> ' + valorPedidoSeguro(p.frete || '-') +
       (p.observacao ? '<br><b>Obs:</b> ' + valorPedidoSeguro(p.observacao) : '');
 
     document.getElementById('detalhe-itens').innerHTML = (p.itens || []).map(function(i){
@@ -8000,7 +8020,7 @@ function imprimirPedido(p){
   const logoKcn = 'logo.png';
   const logoEmpresa = logoEmpresaPedido(p.empresa);
   const empresaNome = nomeEmpresaPedido(p.empresa);
-  const enderecoCliente = juntarEnderecoPedido(p);
+  const cidadeCliente = juntarCidadePedido(p);
 
   const linhasItens = (p.itens || []).map(function(i){
     const produto = [
@@ -8065,7 +8085,7 @@ function imprimirPedido(p){
       '<div class="secao-titulo">Informações do Pedido</div>' +
       '<div class="grid">' +
         '<div class="campo"><span class="label">Número:</span> ' + valorPedidoSeguro(p.numero) + '</div>' +
-        '<div class="campo"><span class="label">Status:</span> ' + valorPedidoSeguro(p.status) + '</div>' +
+        '<div class="campo"><span class="label">Frete:</span> ' + valorPedidoSeguro(p.frete || '-') + '</div>' +
         '<div class="campo"><span class="label">Data:</span> ' + formatData(p.data_pedido) + '</div>' +
         '<div class="campo"><span class="label">Prazo:</span> ' + (p.data_entrega || '-') + '</div>' +
         (p.observacao ? '<div class="campo full"><span class="label">Observação:</span> ' + valorPedidoSeguro(p.observacao) + '</div>' : '') +
@@ -8078,7 +8098,7 @@ function imprimirPedido(p){
         '<div class="campo full"><span class="label">Cliente:</span> ' + valorPedidoSeguro(p.cliente_nome) + '</div>' +
         '<div class="campo"><span class="label">CPF/CNPJ:</span> ' + valorPedidoSeguro(p.cliente_cnpj_cpf) + '</div>' +
         '<div class="campo"><span class="label">Código:</span> ' + valorPedidoSeguro(p.cliente_codigo_origem) + '</div>' +
-        '<div class="campo full"><span class="label">Endereço:</span> ' + valorPedidoSeguro(enderecoCliente) + '</div>' +
+        '<div class="campo full"><span class="label">Cidade:</span> ' + valorPedidoSeguro(cidadeCliente) + '</div>' +
         '<div class="campo"><span class="label">Telefone:</span> ' + valorPedidoSeguro(p.cliente_telefone) + '</div>' +
         '<div class="campo"><span class="label">Email:</span> ' + valorPedidoSeguro(p.cliente_email) + '</div>' +
       '</div>' +
