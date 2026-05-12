@@ -12948,6 +12948,149 @@ function abrirRelatoriosDireto(){
   };
 })();
 
+
+
+/* Relatórios v24: remove botão "Imprimir 1 página" e adiciona botão Gerar PDF dentro da impressão */
+(function(){
+  function relPdfSeguro(valor){
+    return escapeHtmlProduto(valor || '-');
+  }
+
+  function relPdfEmpresaSelecionada(){
+    const sel = document.getElementById('relatorio-empresa-select');
+    return normalizarEmpresaFront(sel && sel.value ? sel.value : empresaAtual || 'acp');
+  }
+
+  function relPdfNomeEmpresa(empresa){
+    const e = normalizarEmpresaFront(empresa || 'acp');
+
+    if(e === 'sleep') return 'Sleep Colchões';
+    if(e === 'tais') return 'Thaís Móveis';
+
+    return 'ACP Indústria de Móveis';
+  }
+
+  function relPdfLogoEmpresa(empresa){
+    const e = normalizarEmpresaFront(empresa || 'acp');
+
+    if(e === 'sleep') return 'logo-sleep.png';
+    if(e === 'tais') return 'logo-thais.png';
+
+    return 'logo-acp.png';
+  }
+
+  function relPdfCss(){
+    return '' +
+      '*{box-sizing:border-box}' +
+      '@page{size:A4 landscape;margin:8mm}' +
+      'body{font-family:Arial,sans-serif;padding:24px;color:#222;font-size:12px;background:#fff}' +
+      '.barra-pdf{display:flex;justify-content:center;gap:10px;align-items:center;margin-bottom:16px;padding:12px;background:#f5f5f5;border:1px solid #ddd;border-radius:8px}' +
+      '.barra-pdf button{border:0;border-radius:6px;padding:10px 16px;cursor:pointer;color:#fff;font-weight:700}' +
+      '.btn-imprimir{background:#777}' +
+      '.btn-pdf{background:#2e7d32}' +
+      '.btn-fechar{background:#444}' +
+      '.aviso-pdf{font-size:12px;color:#555;margin-left:8px}' +
+      '.topo{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #222;padding-bottom:12px;margin-bottom:16px}' +
+      '.topo img{max-height:60px;max-width:130px;object-fit:contain}' +
+      '.topo-centro{text-align:center;flex:1;padding:0 20px}' +
+      '.topo-centro h1{font-size:22px;margin:0 0 6px;text-transform:uppercase;letter-spacing:.5px}' +
+      '.topo-centro div{font-size:13px;color:#555}' +
+      '.card{border:1px solid #ddd;border-radius:6px;padding:14px;margin-bottom:14px;background:#fff}' +
+      'table{width:100%;border-collapse:collapse;margin-top:8px}' +
+      'th,td{border:1px solid #ddd;padding:6px;text-align:left;vertical-align:top}' +
+      'th{background:#f0f0f0}' +
+      '.badge{padding:2px 6px;border-radius:10px;background:#eee}' +
+      '@media print{' +
+        'body{padding:0;font-size:11px}' +
+        '.barra-pdf{display:none!important}' +
+        '.card{break-inside:avoid;page-break-inside:avoid}' +
+        'tr{break-inside:avoid;page-break-inside:avoid}' +
+      '}';
+  }
+
+  window.imprimirRelatorioMensal = function(){
+    if(!window.relatorioMensalAtual && typeof relatorioMensalAtual !== 'undefined'){
+      window.relatorioMensalAtual = relatorioMensalAtual;
+    }
+
+    if(!window.relatorioMensalAtual){
+      toast('Carregue um relatório antes de imprimir','error');
+      return;
+    }
+
+    const empresa = relPdfEmpresaSelecionada();
+    const nomeEmpresa = relPdfNomeEmpresa(empresa);
+    const periodo = window.relatorioMensalAtual.periodo && window.relatorioMensalAtual.periodo.label
+      ? window.relatorioMensalAtual.periodo.label
+      : '';
+
+    const detalhes = document.getElementById('relatorio-resultado')
+      ? document.getElementById('relatorio-resultado').innerHTML
+      : '';
+
+    const janela = window.open('', '_blank');
+
+    if(!janela){
+      toast('O navegador bloqueou a janela de impressão','error');
+      return;
+    }
+
+    const html =
+      '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+      '<title>Relatório ' + relPdfSeguro(nomeEmpresa) + '</title>' +
+      '<style>' + relPdfCss() + '</style>' +
+      '</head><body>' +
+
+        '<div class="barra-pdf">' +
+          '<button class="btn-imprimir" onclick="window.print()">Imprimir</button>' +
+          '<button class="btn-pdf" onclick="window.print()">Gerar PDF</button>' +
+          '<button class="btn-fechar" onclick="window.close()">Fechar</button>' +
+          '<span class="aviso-pdf">Para PDF, clique em <b>Gerar PDF</b> e escolha “Salvar como PDF” na janela de impressão.</span>' +
+        '</div>' +
+
+        '<div class="topo">' +
+          '<div><img src="logo.png" alt="KCN"></div>' +
+          '<div class="topo-centro">' +
+            '<h1>Relatório Mensal</h1>' +
+            '<div><b>' + relPdfSeguro(nomeEmpresa) + '</b></div>' +
+            '<div>Período: ' + relPdfSeguro(periodo) + '</div>' +
+          '</div>' +
+          '<div><img src="' + relPdfLogoEmpresa(empresa) + '" alt="' + relPdfSeguro(nomeEmpresa) + '"></div>' +
+        '</div>' +
+
+        detalhes +
+
+      '</body></html>';
+
+    janela.document.open();
+    janela.document.write(html);
+    janela.document.close();
+  };
+
+  const abrirRelatoriosSemBotaoUmaPagina = window.abrirRelatoriosDireto;
+
+  window.abrirRelatoriosDireto = function(){
+    if(typeof abrirRelatoriosSemBotaoUmaPagina === 'function'){
+      abrirRelatoriosSemBotaoUmaPagina();
+    }
+
+    setTimeout(function(){
+      const btn1Pagina = document.getElementById('btn-imprimir-relatorio-uma-pagina');
+      if(btn1Pagina){
+        btn1Pagina.remove();
+      }
+    }, 350);
+  };
+
+  // Se o relatório já estiver aberto quando esse script carregar, remove também.
+  setTimeout(function(){
+    const btn1Pagina = document.getElementById('btn-imprimir-relatorio-uma-pagina');
+    if(btn1Pagina){
+      btn1Pagina.remove();
+    }
+  }, 500);
+})();
+
 </script>
 </body>
 </html>
