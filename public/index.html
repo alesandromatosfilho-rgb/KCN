@@ -12676,6 +12676,278 @@ function abrirRelatoriosDireto(){
   };
 })();
 
+
+
+/* Relatórios v23: botão para imprimir relatório em 1 página */
+(function(){
+  function rel1Seguro(valor){
+    return escapeHtmlProduto(valor || '-');
+  }
+
+  function rel1EmpresaSelecionada(){
+    const sel = document.getElementById('relatorio-empresa-select');
+    return normalizarEmpresaFront(sel && sel.value ? sel.value : empresaAtual || 'acp');
+  }
+
+  function rel1NomeEmpresa(empresa){
+    const e = normalizarEmpresaFront(empresa || 'acp');
+
+    if(e === 'sleep') return 'Sleep Colchões';
+    if(e === 'tais') return 'Thaís Móveis';
+
+    return 'ACP Indústria de Móveis';
+  }
+
+  function rel1LogoEmpresa(empresa){
+    const e = normalizarEmpresaFront(empresa || 'acp');
+
+    if(e === 'sleep') return 'logo-sleep.png';
+    if(e === 'tais') return 'logo-thais.png';
+
+    return 'logo-acp.png';
+  }
+
+  function rel1Datas(){
+    const inicioEl = document.getElementById('relatorio-data-inicio');
+    const fimEl = document.getElementById('relatorio-data-fim');
+
+    const hoje = new Date();
+    const primeiro = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0') + '-01';
+    const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+    const ultimo = ultimoDia.getFullYear() + '-' + String(ultimoDia.getMonth() + 1).padStart(2, '0') + '-' + String(ultimoDia.getDate()).padStart(2, '0');
+
+    return {
+      inicio: inicioEl && inicioEl.value ? inicioEl.value : primeiro,
+      fim: fimEl && fimEl.value ? fimEl.value : ultimo
+    };
+  }
+
+  function rel1ItensResumo(itens){
+    if(!itens || !itens.length){
+      return '-';
+    }
+
+    return itens.map(function(i){
+      const produto = [
+        i.produto_codigo || '',
+        i.produto_nome || ''
+      ].filter(Boolean).join(' - ');
+
+      return rel1Seguro(produto) + ' / Qtd: ' + rel1Seguro(i.quantidade);
+    }).join('<br>');
+  }
+
+  function rel1Css(qtdPedidos, qtdClientes){
+    const muitoConteudo = Number(qtdPedidos || 0) > 8 || Number(qtdClientes || 0) > 8;
+
+    return '' +
+      '@page{size:A4 landscape;margin:5mm}' +
+      '*{box-sizing:border-box}' +
+      'html,body{margin:0;padding:0;background:#fff;color:#222}' +
+      'body{font-family:Arial,Helvetica,sans-serif;font-size:' + (muitoConteudo ? '7.8px' : '8.6px') + ';line-height:1.12}' +
+      '.folha{width:100%;padding:0}' +
+      '.topo{display:grid;grid-template-columns:72px 1fr 72px;align-items:center;border-bottom:2px solid #222;padding:4px 0 6px;margin-bottom:6px}' +
+      '.logo{height:50px;display:flex;align-items:center;justify-content:center}' +
+      '.logo img{max-width:62px;max-height:46px;object-fit:contain}' +
+      '.titulo{text-align:center}' +
+      '.titulo h1{font-size:18px;letter-spacing:1px;margin:0 0 2px;text-transform:uppercase}' +
+      '.titulo div{font-size:9px;color:#444;margin-top:2px}' +
+      '.resumo{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:7px}' +
+      '.resumo-box{border:1px solid #ddd;border-radius:6px;padding:6px;background:#fafafa}' +
+      '.resumo-box strong{display:block;font-size:13px;color:#9b7634;margin-bottom:2px}' +
+      '.card{border:1px solid #ddd;border-radius:6px;margin-bottom:7px;overflow:hidden;break-inside:avoid}' +
+      '.card h2{font-size:10px;margin:0;padding:5px 7px;background:#f1f1f1;border-bottom:1px solid #ddd;text-transform:uppercase}' +
+      '.detalhes{padding:6px 8px;font-size:8.5px;display:grid;grid-template-columns:repeat(4,1fr);gap:5px}' +
+      'table{width:100%;border-collapse:collapse;table-layout:fixed}' +
+      'th{background:#f3f3f3;border:1px solid #ddd;padding:3px 4px;text-align:left;font-weight:800;font-size:7.8px}' +
+      'td{border:1px solid #e3e3e3;padding:2.4px 4px;vertical-align:top;word-break:break-word;font-size:' + (muitoConteudo ? '7.2px' : '7.8px') + '}' +
+      'tbody tr:nth-child(even){background:#fcfcfc}' +
+      '.pedidos th:nth-child(1),.pedidos td:nth-child(1){width:11%}' +
+      '.pedidos th:nth-child(2),.pedidos td:nth-child(2){width:8%}' +
+      '.pedidos th:nth-child(3),.pedidos td:nth-child(3){width:22%}' +
+      '.pedidos th:nth-child(4),.pedidos td:nth-child(4){width:8%}' +
+      '.pedidos th:nth-child(5),.pedidos td:nth-child(5){width:9%}' +
+      '.pedidos th:nth-child(6),.pedidos td:nth-child(6){width:8%}' +
+      '.pedidos th:nth-child(7),.pedidos td:nth-child(7){width:8%}' +
+      '.pedidos th:nth-child(8),.pedidos td:nth-child(8){width:26%}' +
+      '.clientes th:nth-child(1),.clientes td:nth-child(1){width:32%}' +
+      '.clientes th:nth-child(2),.clientes td:nth-child(2){width:18%}' +
+      '.clientes th:nth-child(3),.clientes td:nth-child(3){width:15%}' +
+      '.clientes th:nth-child(4),.clientes td:nth-child(4){width:15%}' +
+      '.clientes th:nth-child(5),.clientes td:nth-child(5){width:8%;text-align:center}' +
+      '.clientes th:nth-child(6),.clientes td:nth-child(6){width:12%;text-align:right}' +
+      '.right{text-align:right}.center{text-align:center}' +
+      '.nota{font-size:7.5px;color:#666;text-align:right;margin-top:4px}' +
+      '@media print{body{padding:0}.card{break-inside:avoid;page-break-inside:avoid}tr{break-inside:avoid;page-break-inside:avoid}}';
+  }
+
+  async function rel1GarantirDados(){
+    const empresa = rel1EmpresaSelecionada();
+    const datas = rel1Datas();
+
+    if(window.relatorioMensalAtual && window.relatorioMensalAtual.pedidos && window.relatorioMensalAtual.empresa === empresa){
+      return window.relatorioMensalAtual;
+    }
+
+    const dados = await api(
+      '/api/relatorios/mensal?empresa=' + encodeURIComponent(empresa) +
+      '&data_inicio=' + encodeURIComponent(datas.inicio) +
+      '&data_fim=' + encodeURIComponent(datas.fim) +
+      '&_=' + Date.now()
+    );
+
+    window.relatorioMensalAtual = dados;
+    if(typeof relatorioMensalAtual !== 'undefined'){
+      relatorioMensalAtual = dados;
+    }
+
+    return dados;
+  }
+
+  window.imprimirRelatorioUmaPagina = async function(){
+    try{
+      const dados = await rel1GarantirDados();
+      const empresa = rel1EmpresaSelecionada();
+      const empresaNome = rel1NomeEmpresa(empresa);
+      const periodo = dados.periodo && dados.periodo.label ? dados.periodo.label : (rel1Datas().inicio + ' até ' + rel1Datas().fim);
+
+      const pedidos = dados.pedidos || [];
+      const clientes = dados.clientes || [];
+      const resumo = dados.resumo || {};
+
+      const linhasPedidos = pedidos.length ? pedidos.map(function(p){
+        const cidadeUf = [p.cliente_cidade || '', p.cliente_estado || ''].filter(Boolean).join('/') || '-';
+
+        return '<tr>' +
+          '<td><strong>' + rel1Seguro(p.numero) + '</strong></td>' +
+          '<td>' + formatData(p.data_pedido) + '</td>' +
+          '<td>' + rel1Seguro(p.cliente_nome) + '<br><small>' + rel1Seguro(p.cliente_cnpj_cpf) + '</small></td>' +
+          '<td>' + rel1Seguro(cidadeUf) + '</td>' +
+          '<td>' + rel1Seguro(p.data_entrega) + '</td>' +
+          '<td>' + rel1Seguro(p.frete) + '</td>' +
+          '<td class="right">R$ ' + formatMoeda(p.total) + '</td>' +
+          '<td>' + rel1ItensResumo(p.itens) + '</td>' +
+        '</tr>';
+      }).join('') : '<tr><td colspan="8" class="center">Nenhum pedido no período</td></tr>';
+
+      const linhasClientes = clientes.length ? clientes.map(function(c){
+        const cidadeUf = [c.cidade || '', c.estado || ''].filter(Boolean).join('/') || '-';
+
+        return '<tr>' +
+          '<td>' + rel1Seguro(c.razao_social) + '</td>' +
+          '<td>' + rel1Seguro(c.cnpj_cpf) + '</td>' +
+          '<td>' + rel1Seguro(cidadeUf) + '</td>' +
+          '<td>' + rel1Seguro(c.telefone) + '</td>' +
+          '<td class="center">' + rel1Seguro(c.total_pedidos) + '</td>' +
+          '<td class="right">R$ ' + formatMoeda(c.total_comprado) + '</td>' +
+        '</tr>';
+      }).join('') : '<tr><td colspan="6" class="center">Nenhum cliente atendido no período</td></tr>';
+
+      const html =
+        '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+        '<title>Relatório 1 página - ' + rel1Seguro(empresaNome) + '</title>' +
+        '<style>' + rel1Css(pedidos.length, clientes.length) + '</style>' +
+        '</head><body>' +
+          '<div class="folha">' +
+            '<div class="topo">' +
+              '<div class="logo"><img src="logo.png" alt="KCN"></div>' +
+              '<div class="titulo">' +
+                '<h1>Relatório Mensal</h1>' +
+                '<div><strong>' + rel1Seguro(empresaNome) + '</strong></div>' +
+                '<div>Período: ' + rel1Seguro(periodo) + '</div>' +
+              '</div>' +
+              '<div class="logo"><img src="' + rel1LogoEmpresa(empresa) + '" alt="' + rel1Seguro(empresaNome) + '"></div>' +
+            '</div>' +
+
+            '<div class="resumo">' +
+              '<div class="resumo-box"><strong>' + rel1Seguro(resumo.totalPedidos || 0) + '</strong>Pedidos</div>' +
+              '<div class="resumo-box"><strong>' + rel1Seguro(resumo.pedidosAbertos || 0) + '</strong>Em aberto</div>' +
+              '<div class="resumo-box"><strong>' + rel1Seguro(resumo.pedidosAprovados || 0) + '</strong>Aprovados</div>' +
+              '<div class="resumo-box"><strong>' + rel1Seguro(resumo.clientesAtendidos || 0) + '</strong>Clientes</div>' +
+              '<div class="resumo-box"><strong>R$ ' + formatMoeda(resumo.faturamento || 0) + '</strong>Faturamento</div>' +
+            '</div>' +
+
+            '<div class="card">' +
+              '<h2>Pedidos da empresa selecionada</h2>' +
+              '<table class="pedidos">' +
+                '<thead>' +
+                  '<tr>' +
+                    '<th>Número</th>' +
+                    '<th>Data</th>' +
+                    '<th>Cliente / CPF-CNPJ</th>' +
+                    '<th>Cidade</th>' +
+                    '<th>Prazo</th>' +
+                    '<th>Frete</th>' +
+                    '<th>Total</th>' +
+                    '<th>Itens</th>' +
+                  '</tr>' +
+                '</thead>' +
+                '<tbody>' + linhasPedidos + '</tbody>' +
+              '</table>' +
+            '</div>' +
+
+            '<div class="card">' +
+              '<h2>Clientes atendidos</h2>' +
+              '<table class="clientes">' +
+                '<thead>' +
+                  '<tr>' +
+                    '<th>Cliente</th>' +
+                    '<th>CPF/CNPJ</th>' +
+                    '<th>Cidade</th>' +
+                    '<th>Telefone</th>' +
+                    '<th>Pedidos</th>' +
+                    '<th>Total comprado</th>' +
+                  '</tr>' +
+                '</thead>' +
+                '<tbody>' + linhasClientes + '</tbody>' +
+              '</table>' +
+            '</div>' +
+
+            '<div class="nota">Modo compacto para impressão em 1 página.</div>' +
+          '</div>' +
+          '<script>window.onload=function(){setTimeout(function(){window.print();},500);};<\\/script>' +
+        '</body></html>';
+
+      const janela = window.open('', '_blank');
+
+      if(!janela){
+        toast('O navegador bloqueou a janela de impressão','error');
+        return;
+      }
+
+      janela.document.open();
+      janela.document.write(html);
+      janela.document.close();
+
+    }catch(e){
+      console.error('Erro ao imprimir relatório em 1 página:', e);
+      toast(e.message || 'Erro ao imprimir relatório em 1 página','error');
+    }
+  };
+
+  const abrirRelatoriosOriginalUmaPagina = window.abrirRelatoriosDireto;
+
+  window.abrirRelatoriosDireto = function(){
+    if(typeof abrirRelatoriosOriginalUmaPagina === 'function'){
+      abrirRelatoriosOriginalUmaPagina();
+    }
+
+    setTimeout(function(){
+      const btnImprimir = document.getElementById('btn-imprimir-relatorio');
+
+      if(btnImprimir && !document.getElementById('btn-imprimir-relatorio-uma-pagina')){
+        const btn1 = document.createElement('button');
+        btn1.id = 'btn-imprimir-relatorio-uma-pagina';
+        btn1.className = 'btn btn-success';
+        btn1.textContent = 'Imprimir 1 página';
+        btn1.addEventListener('click', window.imprimirRelatorioUmaPagina);
+
+        btnImprimir.insertAdjacentElement('afterend', btn1);
+      }
+    }, 250);
+  };
+})();
+
 </script>
 </body>
 </html>
