@@ -7723,7 +7723,9 @@ function adicionarItem(){
     '<td id="item-total-'+idx+'">R$ 0,00</td>'+
     '<td><button class="btn btn-danger btn-sm" onclick="removerLinhaItemPedido(this)">✕</button></td>';
 
+  tr.dataset.itemIdx = String(idx);
   tbody.appendChild(tr);
+  return idx;
 }
 
 function atualizarPrecoItem(sel,idx){
@@ -7765,9 +7767,9 @@ async function carregarProdutosDaEmpresaAtual(){
 function preencherItemPedidoEditado(item){
   const tbody = document.getElementById('tabela-itens');
 
-  adicionarItem();
-
-  const idx = tbody.children.length - 1;
+  // Usa o índice real criado pela linha.
+  // Antes usava tbody.children.length - 1, mas isso quebrava quando pedidoItemSeq já estava alto.
+  const idx = adicionarItem();
 
   const produtoHidden = document.getElementById('item-produto-' + idx);
   const produtoBusca = document.getElementById('item-produto-busca-' + idx);
@@ -7879,6 +7881,7 @@ async function abrirModalEditarPedido(id){
     if(document.getElementById('ped-forma-pagamento')) document.getElementById('ped-forma-pagamento').value = pedido.forma_pagamento || '';
     document.getElementById('ped-obs').value = pedido.observacao || '';
     document.getElementById('tabela-itens').innerHTML = '';
+    pedidoItemSeq = 0;
     document.getElementById('total-pedido').textContent = '0,00';
 
     if(pedido.itens && pedido.itens.length){
@@ -13965,6 +13968,116 @@ function abrirRelatoriosDireto(){
         btnVer.insertAdjacentElement('afterend', btn);
       });
     }, 120);
+  };
+})();
+
+
+
+/* Pedido v29: correção definitiva da edição com muitos itens */
+(function(){
+  const adicionarItemOriginalV29 = window.adicionarItem;
+
+  window.adicionarItem = function(){
+    const retorno = typeof adicionarItemOriginalV29 === 'function'
+      ? adicionarItemOriginalV29()
+      : undefined;
+
+    const tbodyDepois = document.getElementById('tabela-itens');
+    const linha = tbodyDepois && tbodyDepois.children.length
+      ? tbodyDepois.children[tbodyDepois.children.length - 1]
+      : null;
+
+    if(linha){
+      let idx = retorno;
+
+      if(idx === undefined || idx === null || idx === ''){
+        const input = linha.querySelector('[id^="item-produto-busca-"]');
+        if(input){
+          const match = String(input.id || '').match(/item-produto-busca-(\d+)/);
+          if(match){
+            idx = Number(match[1]);
+          }
+        }
+      }
+
+      if(idx !== undefined && idx !== null && idx !== ''){
+        linha.dataset.itemIdx = String(idx);
+        return Number(idx);
+      }
+    }
+
+    return retorno;
+  };
+
+  window.preencherItemPedidoEditado = function(item){
+    const idx = window.adicionarItem();
+
+    const produtoHidden = document.getElementById('item-produto-' + idx);
+    const produtoBusca = document.getElementById('item-produto-busca-' + idx);
+    const qtdEl = document.getElementById('item-qtd-' + idx);
+    const precoEl = document.getElementById('item-preco-' + idx);
+    const descEl = document.getElementById('item-desc-' + idx);
+
+    const codigoProduto = item.produto_codigo || '';
+    const nomeProduto = item.produto_nome || '';
+    const produtoId = Number(item.produto_id || 0);
+    const textoProduto = (codigoProduto || nomeProduto)
+      ? ((codigoProduto ? codigoProduto + ' - ' : '') + nomeProduto)
+      : '';
+
+    if(produtoHidden){
+      produtoHidden.value = produtoId > 0 ? String(produtoId) : (codigoProduto || nomeProduto || ('editado-' + idx));
+      produtoHidden.dataset.codigo = codigoProduto;
+      produtoHidden.dataset.descricao = nomeProduto;
+      produtoHidden.dataset.preco = item.preco_unitario || 0;
+      produtoHidden.dataset.idReal = produtoId > 0 ? String(produtoId) : '';
+      produtoHidden.dataset.origem = produtoId > 0 ? 'api' : 'editado';
+      produtoHidden.dataset.textoSelecionado = textoProduto;
+    }
+
+    if(produtoBusca){
+      produtoBusca.value = textoProduto;
+    }
+
+    if(qtdEl){
+      qtdEl.value = item.quantidade || 1;
+    }
+
+    if(precoEl){
+      precoEl.value = item.preco_unitario || 0;
+    }
+
+    if(descEl){
+      descEl.value = item.desconto || 0;
+    }
+
+    const corTexto = item.cor_item || '';
+
+    const corEl = document.getElementById('item-cor-' + idx);
+    if(corEl){
+      corEl.value = corTexto;
+    }
+
+    const tubularEl = document.getElementById('item-cor-tubular-' + idx);
+    const estofadoEl = document.getElementById('item-cor-estofado-' + idx);
+
+    if(tubularEl || estofadoEl){
+      const partes = String(corTexto).split('|').map(function(p){ return p.trim(); });
+
+      partes.forEach(function(parte){
+        const lower = parte.toLowerCase();
+
+        if(tubularEl && lower.indexOf('tubular:') === 0){
+          tubularEl.value = parte.replace(/tubular:/i, '').trim();
+        }
+
+        if(estofadoEl && lower.indexOf('estofado:') === 0){
+          estofadoEl.value = parte.replace(/estofado:/i, '').trim();
+        }
+      });
+    }
+
+    calcularTotalItem(idx);
   };
 })();
 
