@@ -54,6 +54,56 @@ async function garantirColunaFretePedido() {
   await run(`ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS forma_pagamento TEXT DEFAULT ''`);
 }
 
+
+function normalizarItemPedidoSeguro(item) {
+  const produto_id = Number(item?.produto_id || 0);
+  const produto_codigo = String(item?.produto_codigo || '').trim();
+  const produto_nome = String(item?.produto_nome || '').trim();
+  const cor_item = String(item?.cor_item || '').trim();
+
+  const quantidade = Number(item?.quantidade || 0);
+  const preco_unitario = Number(item?.preco_unitario || 0);
+  const descontoBruto = Number(item?.desconto || 0);
+  const desconto = Number.isFinite(descontoBruto) ? Math.max(0, Math.min(100, descontoBruto)) : 0;
+
+  const temProduto = produto_id > 0 || produto_codigo.length > 0 || produto_nome.length > 0;
+  const quantidadeValida = Number.isFinite(quantidade) && quantidade > 0;
+  const precoValido = Number.isFinite(preco_unitario) && preco_unitario > 0;
+
+  if (!temProduto || !quantidadeValida || !precoValido) {
+    return null;
+  }
+
+  const total = quantidade * preco_unitario * (1 - desconto / 100);
+
+  if (!Number.isFinite(total) || total <= 0) {
+    return null;
+  }
+
+  return {
+    produto_id,
+    produto_codigo,
+    produto_nome,
+    cor_item,
+    quantidade,
+    preco_unitario,
+    desconto,
+    total
+  };
+}
+
+function normalizarItensPedidoSeguro(itens) {
+  if (!Array.isArray(itens)) return [];
+
+  return itens
+    .map(normalizarItemPedidoSeguro)
+    .filter(Boolean);
+}
+
+function calcularTotalPedidoSeguro(itensValidos) {
+  return itensValidos.reduce((acc, item) => acc + Number(item.total || 0), 0);
+}
+
 function obterIntervaloMes(mes) {
   const agora = new Date();
   const mesSeguro = /^\d{4}-\d{2}$/.test(String(mes || ''))
@@ -1021,18 +1071,23 @@ app.post('/api/pedidos', auth, async (req, res) => {
     cor
   } = req.body;
 
-  if (!cliente_id || !itens?.length) {
-    return res.status(400).json({ erro: 'Cliente e itens são obrigatórios' });
+  const itensValidos = normalizarItensPedidoSeguro(itens);
+
+  if (!cliente_id || !itensValidos.length) {
+    return res.status(400).json({
+      erro: 'Cliente e pelo menos um item válido são obrigatórios. O pedido não foi salvo para evitar zerar os dados.'
+    });
   }
+
 const emp = normalizarEmpresa(empresa);
 
-  const total = itens.reduce((acc, item) => {
-    const quantidade = Number(item.quantidade || 0);
-    const preco = Number(item.preco_unitario || 0);
-    const desconto = Number(item.desconto || 0);
+  const total = calcularTotalPedidoSeguro(itensValidos);
 
-    return acc + (quantidade * preco * (1 - desconto / 100));
-  }, 0);
+  if (!Number.isFinite(total) || total <= 0) {
+    return res.status(400).json({
+      erro: 'Total inválido. O pedido não foi salvo para evitar zerar os dados.'
+    });
+  }
 
   try {
     await garantirColunaFretePedido();
@@ -1066,7 +1121,7 @@ const emp = normalizarEmpresa(empresa);
       [numero, r.id]
     );
 
-    for (const item of itens) {
+    for (const item of itensValidos) {
       const quantidade = Number(item.quantidade || 0);
       const preco = Number(item.preco_unitario || 0);
       const desconto = Number(item.desconto || 0);
@@ -1116,17 +1171,21 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
   const pedidoId = req.params.id;
   const emp = normalizarEmpresa(empresa);
 
-  if (!cliente_id || !itens || !itens.length) {
-    return res.status(400).json({ erro: 'Cliente e itens são obrigatórios' });
+  const itensValidos = normalizarItensPedidoSeguro(itens);
+
+  if (!cliente_id || !itensValidos.length) {
+    return res.status(400).json({
+      erro: 'Edição bloqueada: o pedido veio sem itens válidos. Os dados antigos foram mantidos para evitar zerar o pedido.'
+    });
   }
 
-  const total = itens.reduce((acc, item) => {
-    const quantidade = Number(item.quantidade || 0);
-    const preco = Number(item.preco_unitario || 0);
-    const desconto = Number(item.desconto || 0);
+  const total = calcularTotalPedidoSeguro(itensValidos);
 
-    return acc + (quantidade * preco * (1 - desconto / 100));
-  }, 0);
+  if (!Number.isFinite(total) || total <= 0) {
+    return res.status(400).json({
+      erro: 'Edição bloqueada: total inválido. Os dados antigos foram mantidos para evitar zerar o pedido.'
+    });
+  }
 
   try {
     await garantirColunaFretePedido();
@@ -1166,7 +1225,7 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
 
     await run('DELETE FROM pedido_itens WHERE pedido_id = ?', [pedidoId]);
 
-    for (const item of itens) {
+    for (const item of itensValidos) {
       const quantidade = Number(item.quantidade || 0);
       const preco = Number(item.preco_unitario || 0);
       const desconto = Number(item.desconto || 0);

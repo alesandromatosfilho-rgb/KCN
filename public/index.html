@@ -14081,6 +14081,53 @@ function abrirRelatoriosDireto(){
   };
 })();
 
+
+
+/* Pedido v30: trava de segurança para não salvar pedido zerado */
+(function(){
+  const salvarPedidoOriginalV30 = window.salvarPedido;
+
+  function pedidoTemItemValidoNaTelaV30(){
+    const tbody = document.getElementById('tabela-itens');
+    if(!tbody){
+      return false;
+    }
+
+    const linhas = Array.from(tbody.children || []);
+
+    return linhas.some(function(tr){
+      const produtoEl = tr.querySelector('input[type="hidden"][id^="item-produto-"]');
+      const produtoBuscaEl = tr.querySelector('input[id^="item-produto-busca-"]');
+      const qtdEl = tr.querySelector('input[id^="item-qtd-"]');
+      const precoEl = tr.querySelector('input[id^="item-preco-"]');
+
+      const temProduto =
+        (produtoEl && (
+          produtoEl.value ||
+          produtoEl.dataset.codigo ||
+          produtoEl.dataset.descricao
+        )) ||
+        (produtoBuscaEl && produtoBuscaEl.value && produtoBuscaEl.value.trim());
+
+      const qtd = Number(qtdEl ? qtdEl.value : 0);
+      const preco = Number(precoEl ? precoEl.value : 0);
+
+      return !!temProduto && qtd > 0 && preco > 0;
+    });
+  }
+
+  window.salvarPedido = async function(){
+    if(!pedidoTemItemValidoNaTelaV30()){
+      toast('Pedido não salvo: selecione pelo menos um produto com quantidade e preço válidos. Isso evita zerar o pedido.','error');
+      return;
+    }
+
+    if(typeof salvarPedidoOriginalV30 === 'function'){
+      return salvarPedidoOriginalV30();
+    }
+  };
+})();
+
 </script>
 </body>
 </html>
