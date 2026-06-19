@@ -3,11 +3,13 @@ require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const app = express();
-app.use(
-  helmet({
-    contentSecurityPolicy: false
-  })
-);
+app.use((req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=()'
+  );
+  next();
+});
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
