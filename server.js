@@ -3,7 +3,11 @@ require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const app = express();
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: false
+  })
+);
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
