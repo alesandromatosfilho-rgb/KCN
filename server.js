@@ -10,11 +10,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
-
 const { pool, query, get, run } = require('./database');
-
-const app = express();
-
 const SECRET = process.env.JWT_SECRET;
 const PORT = Number(process.env.PORT) || 3001;
 
