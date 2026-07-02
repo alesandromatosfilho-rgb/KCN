@@ -1883,10 +1883,14 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
   </div>
 
   <div class="page" id="page-pedidos">
-    <div class="page-header">
-      <h2>Pedidos de Venda</h2>
-      <button class="btn btn-primary" onclick="abrirModalPedido()">+ Novo Pedido</button>
-    </div>
+    <div class="search-bar">
+  <input 
+    type="text" 
+    id="busca-pedidos" 
+    placeholder="Buscar por nome do cliente, número do pedido ou status..."
+    oninput="carregarPedidos()"
+  />
+</div>
     <table>
       <thead><tr><th>Número</th><th>Cliente</th><th>Data</th><th>Prazo</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
       <tbody id="tabela-pedidos"><tr><td colspan="7" class="empty-state"><p>Carregando...</p></td></tr></tbody>
@@ -7231,20 +7235,37 @@ async function carregarPedidos(){
     const lista = await api('/api/pedidos?empresa=' + encodeURIComponent(empresaAtual));
     const tbody = document.getElementById('tabela-pedidos');
 
-    if(!lista.length){
+    if(!tbody) return;
+
+    const campoBusca = document.getElementById('busca-pedidos');
+    const busca = campoBusca ? campoBusca.value.toLowerCase().trim() : '';
+
+    let listaFiltrada = Array.isArray(lista) ? lista : [];
+
+    if(busca){
+      listaFiltrada = listaFiltrada.filter(function(p){
+        return (
+          String(p.numero || '').toLowerCase().includes(busca) ||
+          String(p.cliente_nome || '').toLowerCase().includes(busca) ||
+          String(p.status || '').toLowerCase().includes(busca)
+        );
+      });
+    }
+
+    if(!listaFiltrada.length){
       tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><p>Nenhum pedido</p></td></tr>';
       return;
     }
 
-    tbody.innerHTML = lista.map(function(p){
+    tbody.innerHTML = listaFiltrada.map(function(p){
       const numeroSeguro = String(p.numero || '').replace(/'/g, "\\'");
 
       return `
         <tr>
-          <td><strong>${p.numero}</strong></td>
+          <td><strong>${p.numero || ''}</strong></td>
           <td>${p.cliente_nome || '-'}</td>
           <td>${formatData(p.data_pedido)}</td>
-          <td>${(p.data_entrega || '-')}</td>
+          <td>${p.data_entrega || '-'}</td>
           <td>R$ ${formatMoeda(p.total)}</td>
           <td>${badgeStatus(p.status)}</td>
           <td>
@@ -7260,6 +7281,7 @@ async function carregarPedidos(){
         </tr>
       `;
     }).join('');
+
   }catch(e){
     toast('Erro ao carregar pedidos','error');
     console.error(e);
