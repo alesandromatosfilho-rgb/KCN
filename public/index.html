@@ -1881,13 +1881,12 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
       <tbody id="tabela-clientes"><tr><td colspan="6" class="empty-state"><p>Carregando...</p></td></tr></tbody>
     </table>
   </div>
-<div style="display:flex; justify-content:flex-end; margin:15px 0;">
-  <button class="btn-primary" onclick="abrirModalPedido()">
-    + Novo Pedido
-  </button>
-</div>
   <div class="page" id="page-pedidos">
-    <div class="search-bar">
+  <div class="page-header">
+    <h2>Pedidos</h2>
+    <button class="btn btn-primary" onclick="abrirModalPedido()">+ Novo Pedido</button>
+  </div>
+  <div class="search-bar">
   <input 
     type="text" 
     id="busca-pedidos" 
