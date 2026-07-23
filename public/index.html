@@ -1749,35 +1749,46 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
 
   <div class="layout">
     <nav class="sidebar" id="sidebar">
-      <div class="sidebar-brand">
+      <<div class="sidebar-brand">
   <div class="empresa-label">EMPRESA</div>
   <div class="empresa-grid">
+
     <div class="empresa-card empresa-card-acp active" onclick="selecionarEmpresa(this,'ACP','acp','#1e9fd4')">
-  <div class="empresa-icon empresa-icon-img">
-    <img src="logo-acp.png" alt="ACP Móveis">
-  </div>
-  <div class="empresa-nome">ACP</div>
-  <div class="empresa-sub">Indústria<br>de Móveis</div>
-  <div class="empresa-check">✓</div>
-</div>
+      <div class="empresa-icon empresa-icon-img">
+        <img src="logo-acp.png" alt="ACP Móveis">
+      </div>
+      <div class="empresa-nome">ACP</div>
+      <div class="empresa-sub">Indústria<br>de Móveis</div>
+      <div class="empresa-check">✓</div>
+    </div>
 
     <div class="empresa-card" onclick="selecionarEmpresa(this,'Sleep','sleep','#7c6fcd')">
-  <div class="empresa-icon empresa-icon-img">
-    <img src="logo-sleep.png" alt="Sleep Colchões">
-  </div>
-  <div class="empresa-nome">Sleep</div>
-  <div class="empresa-sub">Colchões</div>
-  <div class="empresa-check">✓</div>
-</div>
+      <div class="empresa-icon empresa-icon-img">
+        <img src="logo-sleep.png" alt="Sleep Colchões">
+      </div>
+      <div class="empresa-nome">Sleep</div>
+      <div class="empresa-sub">Colchões</div>
+      <div class="empresa-check">✓</div>
+    </div>
 
     <div class="empresa-card empresa-card-thais" onclick="selecionarEmpresa(this,'Thaís','tais','#2e7d32')">
-  <div class="empresa-icon">
-    <img src="logo-thais.png" alt="Thaís Móveis">
-  </div>
-  <div class="empresa-nome">Thaís</div>
-  <div class="empresa-sub">Móveis</div>
-  <div class="empresa-check">✓</div>
-</div>
+      <div class="empresa-icon">
+        <img src="logo-thais.png" alt="Thaís Móveis">
+      </div>
+      <div class="empresa-nome">Thaís</div>
+      <div class="empresa-sub">Móveis</div>
+      <div class="empresa-check">✓</div>
+    </div>
+
+    <div class="empresa-card" onclick="selecionarEmpresa(this,'JW','jw','#6a3093')">
+      <div class="empresa-icon empresa-icon-img">
+        <img src="logo-jw.png" alt="JW Móveis">
+      </div>
+      <div class="empresa-nome">JW</div>
+      <div class="empresa-sub">Móveis</div>
+      <div class="empresa-check">✓</div>
+    </div>
+
   </div>
 </div>
 
@@ -8199,6 +8210,10 @@ function nomeEmpresaPedido(empresa){
   }
 
   return 'ACP Indústria de Móveis';
+
+  if(e === 'jw') 
+return 'jw';
+
 }
 
 function logoEmpresaPedido(empresa){
@@ -8213,6 +8228,10 @@ function logoEmpresaPedido(empresa){
   }
 
   return 'logo-acp.png';
+if(e === 'jw'){ 
+  return 'logo-jw.png'; 
+
+}
 }
 
 async function verPedido(id){

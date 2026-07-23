@@ -55,7 +55,7 @@ function normalizarEmpresa(empresa) {
   if (e === 'acp') return 'acp';
   if (e === 'sleep') return 'sleep';
   if (e === 'tais' || e === 'thais') return 'tais';
-
+  if (e === 'jw') return 'jw';
   return 'acp';
 }
 
@@ -192,7 +192,9 @@ function variantesEmpresaRelatorio(empresa) {
     'acp moveis'
   ];
 }
-
+if (emp === 'jw') {
+  return ['jw', 'jw moveis', 'jw móveis'];
+}
 function filtroEmpresaRelatorio(alias, empresa) {
   const variantes = variantesEmpresaRelatorio(empresa);
 
@@ -221,6 +223,7 @@ function empresaRespostaRelatorio(empresa) {
   if (emp === 'todos' || emp === 'todas' || emp === 'all') return 'todos';
   if (emp === 'sleep') return 'sleep';
   if (emp === 'tais' || emp === 'thais') return 'tais';
+  if (emp === 'jw') return 'jw';
   return 'acp';
 }
 
@@ -295,6 +298,11 @@ function loadJsonSeed(candidates) {
 let ACP_CLIENTES_SEED = loadJsonSeed([
   path.join(__dirname, 'scripts', 'acp-clientes-seed.json'),
   path.join(__dirname, 'acp-clientes-seed.json')
+]);
+
+let JW_CLIENTES_SEED = loadJsonSeed([
+  path.join(__dirname, 'scripts', 'jw-clientes-seed.json'),
+  path.join(__dirname, 'jw-clientes-seed.json')
 ]);
 
 let SLEEP_TAIS_CLIENTES_SEED = loadJsonSeed([
