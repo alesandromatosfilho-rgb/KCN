@@ -8201,37 +8201,28 @@ function juntarCidadePedido(p){
 function nomeEmpresaPedido(empresa){
   const e = normalizarEmpresaFront(empresa || empresaAtual);
 
-  if(e === 'sleep'){
-    return 'Sleep Colchões';
-  }
-
-  if(e === 'tais'){
-    return 'Thaís Móveis';
-  }
-
+  if (e === 'sleep') return 'Sleep Colchões';
+  if (e === 'tais') return 'Thaís Móveis';
+  if (e === 'jw') return 'JW Móveis';
   return 'ACP Indústria de Móveis';
-
-  if(e === 'jw') 
-return 'jw';
-
 }
 
 function logoEmpresaPedido(empresa){
   const e = normalizarEmpresaFront(empresa || empresaAtual);
 
-  if(e === 'sleep'){
+  if (e === 'sleep') {
     return 'logo-sleep.png';
   }
 
-  if(e === 'tais'){
+  if (e === 'tais') {
     return 'logo-thais.png';
   }
 
-  return 'logo-acp.png';
-if(e === 'jw'){ 
-  return 'logo-jw.png'; 
+  if (e === 'jw') {
+    return 'logo-jw.png';
+  }
 
-}
+  return 'logo-acp.png';
 }
 
 async function verPedido(id){

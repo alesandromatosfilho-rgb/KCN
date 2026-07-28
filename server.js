@@ -184,6 +184,10 @@ function variantesEmpresaRelatorio(empresa) {
     ];
   }
 
+  if (emp === 'jw') {
+    return ['jw', 'jw moveis', 'jw móveis'];
+  }
+
   return [
     'acp',
     'acp indústria de móveis',
@@ -191,9 +195,6 @@ function variantesEmpresaRelatorio(empresa) {
     'acp móveis',
     'acp moveis'
   ];
-}
-if (emp === 'jw') {
-  return ['jw', 'jw moveis', 'jw móveis'];
 }
 function filtroEmpresaRelatorio(alias, empresa) {
   const variantes = variantesEmpresaRelatorio(empresa);
