@@ -45,6 +45,30 @@ app.use(express.json({ limit: '10mb' }));
 app.use(empresaMiddleware);
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Debug endpoint: mostra qual pool/DB está sendo usado para uma empresa (requer auth)
+app.get('/api/debug/db-info', auth, async (req, res) => {
+  const empresa = normalizarEmpresa(req.query.empresa || req.body?.empresa || req.headers['x-empresa']);
+  try {
+    const db = require('./database');
+    const internal = db._internal || {};
+    const hasJw = !!internal.poolJw;
+    let poolName = 'default';
+    try {
+      const pool = internal.getPoolForEmpresa(empresa);
+      poolName = pool === internal.poolJw ? 'jw' : 'default';
+      // attempt to read current_database() to be sure
+      const result = await (pool.query ? pool.query('SELECT current_database()') : Promise.resolve(null));
+      const currentDb = result && result.rows ? result.rows[0].current_database : null;
+      res.json({ empresa, pool: poolName, hasJwPool: hasJw, current_database: currentDb });
+    } catch (innerErr) {
+      // getPoolForEmpresa can throw if JW not configured
+      res.status(500).json({ empresa, error: innerErr.message, hasJwPool: hasJw });
+    }
+  } catch (e) {
+    res.status(500).json({ erro: e.message });
+  }
+});
+
 console.log('Banco de dados: PostgreSQL');
 
 function normalizarEmpresa(empresa) {
