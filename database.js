@@ -34,7 +34,13 @@ function converterPlaceholders(sql) {
 
 function getPoolForEmpresa(empresa) {
   const emp = String(empresa || 'acp').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-  if (emp === 'jw' && poolJw) return poolJw;
+  if (emp === 'jw') {
+    if (!poolJw) {
+      // enforce separation: if JW DB isn't configured, throw to avoid reading ACP data
+      throw new Error('DATABASE_URL_JW não configurado — acesso ao DB da JW não é permitido sem DATABASE_URL_JW');
+    }
+    return poolJw;
+  }
   return poolDefault;
 }
 
