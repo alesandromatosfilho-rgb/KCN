@@ -21,7 +21,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
-const { pool, query, get, run } = require('./database');
+const { pool, query, get, run, empresaMiddleware } = require('./database');
 const SECRET = process.env.JWT_SECRET;
 const PORT = Number(process.env.PORT) || 3001;
 
@@ -42,6 +42,7 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '10mb' }));
+app.use(empresaMiddleware);
 app.use(express.static(path.join(__dirname, 'public')));
 
 console.log('Banco de dados: PostgreSQL');

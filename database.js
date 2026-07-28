@@ -1,17 +1,28 @@
-const { Pool } = require('pg');
+﻿const { Pool } = require('pg');
+const { AsyncLocalStorage } = require('async_hooks');
 
-const connectionString = process.env.DATABASE_URL;
+const DEFAULT_CONNECTION = process.env.DATABASE_URL;
+const JW_CONNECTION = process.env.DATABASE_URL_JW || null;
 
-if (!connectionString) {
+if (!DEFAULT_CONNECTION) {
   throw new Error('DATABASE_URL não configurado no .env');
 }
 
-const pool = new Pool({
-  connectionString,
-  ssl: connectionString.includes('sslmode=require')
-    ? { rejectUnauthorized: false }
-    : false
-});
+function makePool(connectionString) {
+  return new Pool({
+    connectionString,
+    ssl: connectionString.includes('sslmode=require')
+      ? { rejectUnauthorized: false }
+      : false
+  });
+}
+
+// default pool (used for ACP and scripts)
+const poolDefault = makePool(DEFAULT_CONNECTION);
+// optional JW pool (if configured)
+const poolJw = JW_CONNECTION ? makePool(JW_CONNECTION) : null;
+
+const als = new AsyncLocalStorage();
 
 function converterPlaceholders(sql) {
   let i = 0;
@@ -21,8 +32,16 @@ function converterPlaceholders(sql) {
     .replace(/IFNULL/g, 'COALESCE');
 }
 
+function getPoolForEmpresa(empresa) {
+  const emp = String(empresa || 'acp').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  if (emp === 'jw' && poolJw) return poolJw;
+  return poolDefault;
+}
+
 async function query(sql, params = []) {
   const text = converterPlaceholders(sql);
+  const store = als.getStore();
+  const pool = getPoolForEmpresa(store?.empresa);
   const result = await pool.query(text, params);
   return result.rows;
 }
@@ -42,6 +61,9 @@ async function run(sql, params = []) {
     text += ' RETURNING id';
   }
 
+  const store = als.getStore();
+  const pool = getPoolForEmpresa(store?.empresa);
+
   const result = await pool.query(text, params);
 
   return {
@@ -50,9 +72,26 @@ async function run(sql, params = []) {
   };
 }
 
+// Express middleware to set empresa in AsyncLocalStorage per request
+function empresaMiddleware(req, res, next) {
+  // priority: query param -> body -> header X-Empresa -> default 'acp'
+  const empresaRaw = (req.query && req.query.empresa) || (req.body && req.body.empresa) || req.headers['x-empresa'] || 'acp';
+  const empresa = String(empresaRaw || 'acp').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  als.run({ empresa }, () => next());
+}
+
 module.exports = {
-  pool,
+  // export default pool for scripts/tools that import pool directly
+  pool: poolDefault,
   query,
   get,
-  run
+  run,
+  empresaMiddleware,
+  // exported for debug or manual use
+  _internal: {
+    poolDefault,
+    poolJw,
+    getPoolForEmpresa,
+    als
+  }
 };
