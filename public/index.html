@@ -1782,7 +1782,7 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
 
     <div class="empresa-card" onclick="selecionarEmpresa(this,'JW','jw','#6a3093')">
       <div class="empresa-icon empresa-icon-img">
-        <img src="logo-jw.png" alt="JW Móveis">
+        <img src="logo-jw.jpg" alt="JW Móveis">
       </div>
       <div class="empresa-nome">JW</div>
       <div class="empresa-sub">Móveis</div>
@@ -6718,6 +6718,7 @@ function logout(){
 
 async function api(url,method='GET',body=null,useAuth=true){
   const opts={method,headers:{'Content-Type':'application/json'}};
+  opts.headers['X-Empresa']=normalizarEmpresaFront(empresaAtual||'acp');
   if(useAuth&&token) opts.headers['Authorization']='Bearer '+token;
   if(body) opts.body=JSON.stringify(body);
   const res=await fetch(url,opts);
@@ -8219,7 +8220,7 @@ function logoEmpresaPedido(empresa){
   }
 
   if (e === 'jw') {
-    return 'logo-jw.png';
+    return 'logo-jw.jpg';
   }
 
   return 'logo-acp.png';
@@ -8835,12 +8836,14 @@ async function relatorioProdutos(){ carregarRelatorioMensal(); }
 function normalizarEmpresaFront(sigla){
   const e = String(sigla || 'acp')
     .toLowerCase()
+    .trim()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
   if(e === 'acp') return 'acp';
   if(e === 'sleep') return 'sleep';
   if(e === 'tais' || e === 'thais') return 'tais';
+  if(e === 'jw') return 'jw';
 
   return 'acp';
 }

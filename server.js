@@ -74,6 +74,7 @@ console.log('Banco de dados: PostgreSQL');
 function normalizarEmpresa(empresa) {
   const e = String(empresa || 'acp')
     .toLowerCase()
+    .trim()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
@@ -82,6 +83,12 @@ function normalizarEmpresa(empresa) {
   if (e === 'tais' || e === 'thais') return 'tais';
   if (e === 'jw') return 'jw';
   return 'acp';
+}
+
+function empresaDaRequisicao(req) {
+  return normalizarEmpresa(
+    req.query?.empresa || req.body?.empresa || req.headers['x-empresa']
+  );
 }
 
 async function garantirColunaFretePedido() {
@@ -424,7 +431,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
 
 app.get('/api/dashboard', auth, async (req, res) => {
-  const empresa = normalizarEmpresa(req.query.empresa);
+  const empresa = empresaDaRequisicao(req);
   const { mes, inicio, fim } = obterIntervaloMes(req.query.mes);
 
   try {
@@ -477,7 +484,7 @@ app.get('/api/dashboard', auth, async (req, res) => {
         p.cor,
         c.razao_social as cliente_nome
        FROM pedidos p
-       LEFT JOIN clientes c ON c.id = p.cliente_id
+       LEFT JOIN clientes c ON c.id = p.cliente_id AND c.empresa = p.empresa
        WHERE p.empresa = ?
        AND p.data_pedido >= ?
        AND p.data_pedido < ?
@@ -502,7 +509,7 @@ app.get('/api/dashboard', auth, async (req, res) => {
 // ─── RELATÓRIOS MENSAIS ─────────────────────────────────────────────────────
 
 app.get('/api/relatorios/meses', auth, async (req, res) => {
-  const empresa = normalizarEmpresa(req.query.empresa);
+  const empresa = empresaDaRequisicao(req);
 
   try {
     const rows = await query(
@@ -642,7 +649,7 @@ app.get('/api/relatorios/mensal', auth, async (req, res) => {
         c.email as cliente_email,
         c.codigo_origem as cliente_codigo_origem
        FROM pedidos p
-       LEFT JOIN clientes c ON c.id = p.cliente_id
+       LEFT JOIN clientes c ON c.id = p.cliente_id AND c.empresa = p.empresa
        WHERE ${filtroPedido.sql}
        AND SUBSTR(CAST(p.data_pedido AS TEXT), 1, 10) >= ?
        AND SUBSTR(CAST(p.data_pedido AS TEXT), 1, 10) < ?
@@ -685,7 +692,7 @@ app.get('/api/relatorios/mensal', auth, async (req, res) => {
         COUNT(p.id) as total_pedidos,
         COALESCE(SUM(p.total), 0) as total_comprado
        FROM pedidos p
-       LEFT JOIN clientes c ON c.id = p.cliente_id
+       LEFT JOIN clientes c ON c.id = p.cliente_id AND c.empresa = p.empresa
        WHERE ${filtroPedido.sql}
        AND SUBSTR(CAST(p.data_pedido AS TEXT), 1, 10) >= ?
        AND SUBSTR(CAST(p.data_pedido AS TEXT), 1, 10) < ?
@@ -727,7 +734,7 @@ app.get('/api/relatorios/mensal', auth, async (req, res) => {
 
 app.get('/api/clientes', auth, async (req, res) => {
   const busca = req.query.busca ? `%${req.query.busca}%` : '%';
-  const empresa = normalizarEmpresa(req.query.empresa);
+  const empresa = empresaDaRequisicao(req);
 
   try {
     const rows = await query(
@@ -753,8 +760,13 @@ app.get('/api/clientes', auth, async (req, res) => {
 });
 
 app.get('/api/clientes/:id', auth, async (req, res) => {
+  const empresa = empresaDaRequisicao(req);
+
   try {
-    const row = await get('SELECT * FROM clientes WHERE id = ?', [req.params.id]);
+    const row = await get(
+      'SELECT * FROM clientes WHERE id = ? AND empresa = ?',
+      [req.params.id, empresa]
+    );
 
     if (!row) {
       return res.status(404).json({ erro: 'Cliente não encontrado' });
@@ -784,7 +796,7 @@ app.post('/api/clientes', auth, async (req, res) => {
     return res.status(400).json({ erro: 'Razão social é obrigatória' });
   }
 
-  const emp = normalizarEmpresa(empresa);
+  const emp = empresaDaRequisicao(req);
 
   try {
     const r = await run(
@@ -830,8 +842,10 @@ app.put('/api/clientes/:id', auth, async (req, res) => {
     codigo_origem
   } = req.body;
 
+  const emp = empresaDaRequisicao(req);
+
   try {
-    await run(
+    const r = await run(
       `UPDATE clientes 
        SET razao_social = ?, 
            nome_fantasia = ?, 
@@ -844,7 +858,7 @@ app.put('/api/clientes/:id', auth, async (req, res) => {
            status = ?, 
            empresa = ?, 
            codigo_origem = ?
-       WHERE id = ?`,
+       WHERE id = ? AND empresa = ?`,
       [
         razao_social,
         nome_fantasia || '',
@@ -855,11 +869,16 @@ app.put('/api/clientes/:id', auth, async (req, res) => {
         estado || '',
         endereco || '',
         status || 'ativo',
-        normalizarEmpresa(empresa),
+        emp,
         codigo_origem || null,
-        req.params.id
+        req.params.id,
+        emp
       ]
     );
+
+    if (!r.changes) {
+      return res.status(404).json({ erro: 'Cliente nao encontrado nesta empresa' });
+    }
 
     res.json({ mensagem: 'Cliente atualizado com sucesso' });
   } catch (e) {
@@ -869,7 +888,7 @@ app.put('/api/clientes/:id', auth, async (req, res) => {
 
 app.delete('/api/clientes/:id', auth, async (req, res) => {
   const clienteId = req.params.id;
-  const empresa = normalizarEmpresa(req.query.empresa);
+  const empresa = empresaDaRequisicao(req);
   const remover = req.query.remover === '1';
 
   try {
@@ -920,7 +939,7 @@ app.delete('/api/clientes/:id', auth, async (req, res) => {
 
 app.get('/api/produtos', auth, async (req, res) => {
   const busca = req.query.busca ? `%${req.query.busca}%` : '%';
-  const empresa = req.query.empresa ? normalizarEmpresa(req.query.empresa) : null;
+  const empresa = req.query.empresa ? normalizarEmpresa(req.query.empresa) : empresaDaRequisicao(req);
 
   try {
     let sql = `
@@ -949,6 +968,7 @@ app.get('/api/produtos', auth, async (req, res) => {
 
 app.post('/api/produtos', auth, async (req, res) => {
   const { codigo, descricao, unidade, preco_venda, estoque, colecao_id, empresa } = req.body;
+  const emp = empresaDaRequisicao(req);
 
   if (!codigo || !descricao) {
     return res.status(400).json({ erro: 'Código e descrição são obrigatórios' });
@@ -967,7 +987,7 @@ app.post('/api/produtos', auth, async (req, res) => {
         Number(estoque || 0),
         'ativo',
         Number(colecao_id || 0),
-        normalizarEmpresa(empresa)
+        emp
       ]
     );
 
@@ -982,9 +1002,10 @@ app.post('/api/produtos', auth, async (req, res) => {
 
 app.put('/api/produtos/:id', auth, async (req, res) => {
   const { codigo, descricao, unidade, preco_venda, estoque, colecao_id, empresa } = req.body;
+  const emp = empresaDaRequisicao(req);
 
   try {
-    await run(
+    const r = await run(
       `UPDATE produtos 
        SET codigo = ?, 
            descricao = ?, 
@@ -993,7 +1014,7 @@ app.put('/api/produtos/:id', auth, async (req, res) => {
            estoque = ?,
            colecao_id = ?,
            empresa = ?
-       WHERE id = ?`,
+       WHERE id = ? AND empresa = ?`,
       [
         codigo,
         descricao,
@@ -1001,10 +1022,15 @@ app.put('/api/produtos/:id', auth, async (req, res) => {
         Number(preco_venda || 0),
         Number(estoque || 0),
         Number(colecao_id || 0),
-        normalizarEmpresa(empresa),
-        req.params.id
+        emp,
+        req.params.id,
+        emp
       ]
     );
+
+    if (!r.changes) {
+      return res.status(404).json({ erro: 'Produto nao encontrado nesta empresa' });
+    }
 
     res.json({ mensagem: 'Produto atualizado' });
   } catch (e) {
@@ -1014,10 +1040,12 @@ app.put('/api/produtos/:id', auth, async (req, res) => {
 
 
 app.delete('/api/produtos/:id', auth, async (req, res) => {
+  const empresa = empresaDaRequisicao(req);
+
   try {
     const produto = await get(
-      'SELECT id FROM produtos WHERE id = ?',
-      [req.params.id]
+      'SELECT id FROM produtos WHERE id = ? AND empresa = ?',
+      [req.params.id, empresa]
     );
 
     if (!produto) {
@@ -1025,8 +1053,8 @@ app.delete('/api/produtos/:id', auth, async (req, res) => {
     }
 
     await run(
-      'UPDATE produtos SET status = ? WHERE id = ?',
-      ['inativo', req.params.id]
+      'UPDATE produtos SET status = ? WHERE id = ? AND empresa = ?',
+      ['inativo', req.params.id, empresa]
     );
 
     res.json({ mensagem: 'Produto removido com sucesso' });
@@ -1039,7 +1067,7 @@ app.delete('/api/produtos/:id', auth, async (req, res) => {
 // ─── PEDIDOS ─────────────────────────────────────────────────────────────────
 
 app.get('/api/pedidos', auth, async (req, res) => {
-  const empresa = normalizarEmpresa(req.query.empresa);
+  const empresa = empresaDaRequisicao(req);
 
   try {
     const rows = await query(
@@ -1048,7 +1076,7 @@ app.get('/api/pedidos', auth, async (req, res) => {
         c.razao_social as cliente_nome, 
         u.nome as vendedor_nome
        FROM pedidos p
-       JOIN clientes c ON c.id = p.cliente_id
+       JOIN clientes c ON c.id = p.cliente_id AND c.empresa = p.empresa
        LEFT JOIN usuarios u ON u.id = p.vendedor_id
        WHERE p.empresa = ?
        ORDER BY p.id DESC`,
@@ -1062,6 +1090,8 @@ app.get('/api/pedidos', auth, async (req, res) => {
 });
 
 app.get('/api/pedidos/:id', auth, async (req, res) => {
+  const empresa = empresaDaRequisicao(req);
+
   try {
     const pedido = await get(
       `SELECT 
@@ -1076,9 +1106,9 @@ app.get('/api/pedidos/:id', auth, async (req, res) => {
         c.email as cliente_email,
         c.codigo_origem as cliente_codigo_origem
        FROM pedidos p 
-       JOIN clientes c ON c.id = p.cliente_id
-       WHERE p.id = ?`,
-      [req.params.id]
+       JOIN clientes c ON c.id = p.cliente_id AND c.empresa = p.empresa
+       WHERE p.id = ? AND p.empresa = ?`,
+      [req.params.id, empresa]
     );
 
     if (!pedido) {
@@ -1123,7 +1153,7 @@ app.post('/api/pedidos', auth, async (req, res) => {
     });
   }
 
-const emp = normalizarEmpresa(empresa);
+const emp = empresaDaRequisicao(req);
 
   const total = calcularTotalPedidoSeguro(itensValidos);
 
@@ -1213,7 +1243,7 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
   } = req.body;
 
   const pedidoId = req.params.id;
-  const emp = normalizarEmpresa(empresa);
+  const emp = empresaDaRequisicao(req);
 
   const itensValidos = normalizarItensPedidoSeguro(itens);
 
@@ -1253,7 +1283,7 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
            total = ?,
            empresa = ?,
            cor = ?
-       WHERE id = ?`,
+       WHERE id = ? AND empresa = ?`,
       [
         cliente_id,
         data_entrega || '',
@@ -1263,7 +1293,8 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
         total,
         emp,
         cor || null,
-        pedidoId
+        pedidoId,
+        emp
       ]
     );
 
@@ -1304,11 +1335,17 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
 });
 
 app.put('/api/pedidos/:id/status', auth, async (req, res) => {
+  const empresa = empresaDaRequisicao(req);
+
   try {
-    await run(
-      'UPDATE pedidos SET status = ? WHERE id = ?',
-      [req.body.status, req.params.id]
+    const r = await run(
+      'UPDATE pedidos SET status = ? WHERE id = ? AND empresa = ?',
+      [req.body.status, req.params.id, empresa]
     );
+
+    if (!r.changes) {
+      return res.status(404).json({ erro: 'Pedido nao encontrado nesta empresa' });
+    }
 
     res.json({ mensagem: 'Status atualizado' });
   } catch (e) {
@@ -1317,7 +1354,7 @@ app.put('/api/pedidos/:id/status', auth, async (req, res) => {
 });
 
 app.delete('/api/pedidos/:id', auth, async (req, res) => {
-  const empresa = normalizarEmpresa(req.query.empresa);
+  const empresa = empresaDaRequisicao(req);
   const pedidoId = req.params.id;
 
   try {
@@ -1331,7 +1368,7 @@ app.delete('/api/pedidos/:id', auth, async (req, res) => {
     }
 
     await run('DELETE FROM pedido_itens WHERE pedido_id = ?', [pedidoId]);
-    await run('DELETE FROM pedidos WHERE id = ?', [pedidoId]);
+    await run('DELETE FROM pedidos WHERE id = ? AND empresa = ?', [pedidoId, empresa]);
 
     res.json({ mensagem: 'Pedido removido com sucesso' });
   } catch (e) {
@@ -1342,7 +1379,7 @@ app.delete('/api/pedidos/:id', auth, async (req, res) => {
 // ─── ASSISTÊNCIAS ────────────────────────────────────────────────────────────
 
 app.get('/api/assistencias', auth, async (req, res) => {
-  const empresa = normalizarEmpresa(req.query.empresa);
+  const empresa = empresaDaRequisicao(req);
   const busca = req.query.busca ? `%${req.query.busca}%` : '%';
 
   try {
@@ -1366,10 +1403,12 @@ app.get('/api/assistencias', auth, async (req, res) => {
 });
 
 app.get('/api/assistencias/:id', auth, async (req, res) => {
+  const empresa = empresaDaRequisicao(req);
+
   try {
     const assistencia = await get(
-      'SELECT * FROM assistencias WHERE id = ?',
-      [req.params.id]
+      'SELECT * FROM assistencias WHERE id = ? AND empresa = ?',
+      [req.params.id, empresa]
     );
 
     if (!assistencia) {
@@ -1401,7 +1440,7 @@ app.post('/api/assistencias', auth, async (req, res) => {
     itens
   } = req.body;
 
-  const emp = normalizarEmpresa(empresa);
+  const emp = empresaDaRequisicao(req);
 
   if (!cliente_id) {
     return res.status(400).json({ erro: 'Cliente é obrigatório' });
@@ -1469,11 +1508,17 @@ app.post('/api/assistencias', auth, async (req, res) => {
 });
 
 app.put('/api/assistencias/:id/status', auth, async (req, res) => {
+  const empresa = empresaDaRequisicao(req);
+
   try {
-    await run(
-      'UPDATE assistencias SET status = ? WHERE id = ?',
-      [req.body.status, req.params.id]
+    const r = await run(
+      'UPDATE assistencias SET status = ? WHERE id = ? AND empresa = ?',
+      [req.body.status, req.params.id, empresa]
     );
+
+    if (!r.changes) {
+      return res.status(404).json({ erro: 'Assistencia nao encontrada nesta empresa' });
+    }
 
     res.json({ mensagem: 'Status atualizado' });
   } catch (e) {
@@ -1482,9 +1527,20 @@ app.put('/api/assistencias/:id/status', auth, async (req, res) => {
 });
 
 app.delete('/api/assistencias/:id', auth, async (req, res) => {
+  const empresa = empresaDaRequisicao(req);
+
   try {
+    const assistencia = await get(
+      'SELECT id FROM assistencias WHERE id = ? AND empresa = ?',
+      [req.params.id, empresa]
+    );
+
+    if (!assistencia) {
+      return res.status(404).json({ erro: 'Assistencia nao encontrada nesta empresa' });
+    }
+
     await run('DELETE FROM assistencia_itens WHERE assistencia_id = ?', [req.params.id]);
-    await run('DELETE FROM assistencias WHERE id = ?', [req.params.id]);
+    await run('DELETE FROM assistencias WHERE id = ? AND empresa = ?', [req.params.id, empresa]);
 
     res.json({ mensagem: 'Assistência removida' });
   } catch (e) {
