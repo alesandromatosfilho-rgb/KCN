@@ -5869,6 +5869,11 @@ const CORES_ACP = [
   'Cinamomo/Off',
   'Branco'
 ];
+const CORES_JW = [
+  'Branco',
+  'Carvalho Europeu',
+  'Acai'
+];
 const CORES_TAIS_TUBULAR = [
   'Preto',
   'Branco',
@@ -7742,6 +7747,15 @@ function adicionarItem(){
         }).join('')+
       '</select>';
   }
+  else if(empresaAtual === 'jw'){
+    campoCor =
+      '<select id="item-cor-'+idx+'" style="width:100%;padding:4px;border:1px solid #ddd;border-radius:3px;font-size:12px">'+
+        '<option value="">Cor...</option>'+
+        CORES_JW.map(function(c){
+          return '<option value="'+c+'">'+c+'</option>';
+        }).join('')+
+      '</select>';
+  }
   else if(empresaAtual === 'tais'){
     campoCor =
       '<div style="display:grid;gap:4px">'+
@@ -9017,6 +9031,15 @@ function montarCampoCorAssistencia(idx){
     return '<select data-ass-cor="principal" id="ass-cor-'+idx+'" style="'+estiloBase+';border-color:#8a6a3f;background:#fff8ed">'+
       '<option value="">Cor...</option>'+
       CORES_ACP.map(function(c){
+        return '<option value="'+escapeHtmlProduto(c)+'">'+escapeHtmlProduto(c)+'</option>';
+      }).join('')+
+    '</select>';
+  }
+
+  if(empresaAtual === 'jw'){
+    return '<select data-ass-cor="principal" id="ass-cor-'+idx+'" style="'+estiloBase+';border-color:#6a3093;background:#fbf5ff">'+
+      '<option value="">Cor...</option>'+
+      CORES_JW.map(function(c){
         return '<option value="'+escapeHtmlProduto(c)+'">'+escapeHtmlProduto(c)+'</option>';
       }).join('')+
     '</select>';
