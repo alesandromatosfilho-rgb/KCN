@@ -1,0 +1,245 @@
+[
+  {
+    "codigo": "JW001",
+    "descricao": "GUARDA ROUPA 6 PORTAS E 3 GAV. ENCAIXADO ESMAEL",
+    "unidade": "UN",
+    "preco_venda": 1037,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW002",
+    "descricao": "GUARDA ROUPA 6 P E 3 GAV. ENCAIXADO ESMAEL POPULAR",
+    "unidade": "UN",
+    "preco_venda": 869,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW003",
+    "descricao": "GUARDA ROUPA 4 PORTAS E 4 GAV. TONINHO",
+    "unidade": "UN",
+    "preco_venda": 815,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW004",
+    "descricao": "GUARDA ROUPA 4 PORTAS E 2 GAV. LARA",
+    "unidade": "UN",
+    "preco_venda": 733,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW005",
+    "descricao": "GUARDA ROUPA 3 PORTAS POPULAR",
+    "unidade": "UN",
+    "preco_venda": 570,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW006",
+    "descricao": "GUARDA ROUPA 2 PORTAS NADIA",
+    "unidade": "UN",
+    "preco_venda": 427,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW007",
+    "descricao": "COMODA GRANDE VITORIA",
+    "unidade": "UN",
+    "preco_venda": 565,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW008",
+    "descricao": "COMODA PEQUENA LAISA",
+    "unidade": "UN",
+    "preco_venda": 322,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW009",
+    "descricao": "COMODA SAPATEIRA LILI",
+    "unidade": "UN",
+    "preco_venda": 463,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW010",
+    "descricao": "COMODA POPULAR",
+    "unidade": "UN",
+    "preco_venda": 346,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW011",
+    "descricao": "PENTEADEIRA JULIA",
+    "unidade": "UN",
+    "preco_venda": 458,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW012",
+    "descricao": "BANCO PARA PENTEADEIRA",
+    "unidade": "UN",
+    "preco_venda": 180,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW013",
+    "descricao": "ARMARIO P/ COZINHA GRANDE HUGO",
+    "unidade": "UN",
+    "preco_venda": 682,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW014",
+    "descricao": "ARMARIO P/ COZINHA PEQUENO JOSA",
+    "unidade": "UN",
+    "preco_venda": 427,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW015",
+    "descricao": "AEREO PARA COZINHA ANA",
+    "unidade": "UN",
+    "preco_venda": 296,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW016",
+    "descricao": "BALCAO PARA COZINHA LEO",
+    "unidade": "UN",
+    "preco_venda": 369,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW017",
+    "descricao": "RACK JULIANA",
+    "unidade": "UN",
+    "preco_venda": 349,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW018",
+    "descricao": "PAINEL JULIANA",
+    "unidade": "UN",
+    "preco_venda": 294,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW019",
+    "descricao": "RACK PEQUENO CECILIA",
+    "unidade": "UN",
+    "preco_venda": 243,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW020",
+    "descricao": "MULTIUSO COM PORTAS BIA",
+    "unidade": "UN",
+    "preco_venda": 381,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW021",
+    "descricao": "MULTIUSO SEM PORTAS ADRI",
+    "unidade": "UN",
+    "preco_venda": 244,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW022",
+    "descricao": "BAU MARIA",
+    "unidade": "UN",
+    "preco_venda": 173,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW023",
+    "descricao": "MESA PEQUENA ERIC",
+    "unidade": "UN",
+    "preco_venda": 216,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW024",
+    "descricao": "MESA GRANDE DAVI",
+    "unidade": "UN",
+    "preco_venda": 249,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW025",
+    "descricao": "CABECEIRA SOLTEIRO LEVI",
+    "unidade": "UN",
+    "preco_venda": 218,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW026",
+    "descricao": "CABECEIRA CASAL KELY",
+    "unidade": "UN",
+    "preco_venda": 322,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  },
+  {
+    "codigo": "JW027",
+    "descricao": "CADEIRA DE MADEIRA",
+    "unidade": "UN",
+    "preco_venda": 65,
+    "estoque": 0,
+    "colecao_id": 0,
+    "empresa": "jw"
+  }
+]
