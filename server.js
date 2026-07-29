@@ -43,6 +43,19 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 app.use(empresaMiddleware);
+app.use((req, res, next) => {
+  const aceitaHtml = String(req.headers.accept || '').includes('text/html');
+  const caminhoHtml = req.path === '/' || req.path.endsWith('.html');
+
+  if (caminhoHtml || aceitaHtml) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+  }
+
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Debug endpoint: mostra qual pool/DB está sendo usado para uma empresa (requer auth)
