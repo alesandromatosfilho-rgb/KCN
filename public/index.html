@@ -9525,6 +9525,10 @@ function nomeEmpresaRelatorio(empresa){
     return 'Thaís Móveis';
   }
 
+  if(e === 'jw'){
+    return 'JW Móveis';
+  }
+
   return 'ACP Indústria de Móveis';
 }
 
@@ -9552,6 +9556,7 @@ function htmlRelatoriosFlutuante(){
               '<option value="acp">ACP Indústria de Móveis</option>' +
               '<option value="sleep">Sleep Colchões</option>' +
               '<option value="tais">Thaís Móveis</option>' +
+              '<option value="jw">JW Móveis</option>' +
             '</select>' +
           '</div>' +
           '<div class="form-group">' +
@@ -9853,6 +9858,10 @@ function nomeEmpresaRelatorio(empresa){
     return 'Thaís Móveis';
   }
 
+  if(e === 'jw'){
+    return 'JW Móveis';
+  }
+
   return 'ACP Indústria de Móveis';
 }
 
@@ -9881,6 +9890,7 @@ function htmlRelatoriosFlutuante(){
               '<option value="acp">ACP Indústria de Móveis</option>' +
               '<option value="sleep">Sleep Colchões</option>' +
               '<option value="tais">Thaís Móveis</option>' +
+              '<option value="jw">JW Móveis</option>' +
             '</select>' +
           '</div>' +
           '<div class="form-group">' +
@@ -10113,6 +10123,7 @@ function htmlRelatoriosFlutuante(){
               '<option value="acp">ACP Indústria de Móveis</option>' +
               '<option value="sleep">Sleep Colchões</option>' +
               '<option value="tais">Thaís Móveis</option>' +
+              '<option value="jw">JW Móveis</option>' +
             '</select>' +
           '</div>' +
           '<div class="form-group">' +
@@ -10230,6 +10241,7 @@ function abrirRelatoriosDireto(){
 
     if(e === 'sleep') return 'Sleep Colchões';
     if(e === 'tais') return 'Thaís Móveis';
+    if(e === 'jw') return 'JW Móveis';
 
     return 'ACP Indústria de Móveis';
   }
@@ -10523,6 +10535,7 @@ function abrirRelatoriosDireto(){
                 '<option value="acp">ACP Indústria de Móveis</option>' +
                 '<option value="sleep">Sleep Colchões</option>' +
                 '<option value="tais">Thaís Móveis</option>' +
+                '<option value="jw">JW Móveis</option>' +
               '</select>' +
             '</div>' +
             '<div class="form-group">' +
@@ -10600,7 +10613,7 @@ function abrirRelatoriosDireto(){
 
 
 
-/* Relatórios v9: resumo das 3 empresas na frente, atualizado igual painel de bordo */
+/* Relatórios v9: resumo das empresas na frente, atualizado igual painel de bordo */
 (function(){
   function relPrimeiroDiaMes(){
     const h = new Date();
@@ -10618,6 +10631,7 @@ function abrirRelatoriosDireto(){
 
     if(e === 'sleep') return 'Sleep Colchões';
     if(e === 'tais') return 'Thaís Móveis';
+    if(e === 'jw') return 'JW Móveis';
 
     return 'ACP Indústria de Móveis';
   }
@@ -10724,6 +10738,7 @@ function abrirRelatoriosDireto(){
                 '<option value="acp">ACP Indústria de Móveis</option>' +
                 '<option value="sleep">Sleep Colchões</option>' +
                 '<option value="tais">Thaís Móveis</option>' +
+                '<option value="jw">JW Móveis</option>' +
               '</select>' +
             '</div>' +
             '<div class="form-group">' +
@@ -10741,7 +10756,7 @@ function abrirRelatoriosDireto(){
             '<button id="btn-imprimir-relatorio" class="btn btn-success">Imprimir relatório</button>' +
           '</div>' +
           '<p style="font-size:12px;color:#777;margin-top:10px">' +
-            'O resumo abaixo mostra ACP, Sleep e Thaís ao mesmo tempo. A empresa do campo acima controla apenas os detalhes da tabela de pedidos.' +
+            'O resumo abaixo mostra ACP, Sleep, Thaís e JW ao mesmo tempo. A empresa do campo acima controla apenas os detalhes da tabela de pedidos.' +
           '</p>' +
         '</div>' +
 
@@ -11095,6 +11110,10 @@ function abrirRelatoriosDireto(){
       return 'logo-thais.png';
     }
 
+    if(e === 'jw'){
+      return 'logo-jw.jpg';
+    }
+
     return 'logo-acp.png';
   }
 
@@ -11107,6 +11126,10 @@ function abrirRelatoriosDireto(){
 
     if(e === 'tais'){
       return 'Thaís Móveis';
+    }
+
+    if(e === 'jw'){
+      return 'JW Móveis';
     }
 
     return 'ACP Indústria de Móveis';
@@ -11245,19 +11268,20 @@ function abrirRelatoriosDireto(){
 
       const html =
         '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
-        '<title>Relatório Mensal - 3 Empresas</title>' +
+        '<title>Relatório Mensal - 4 Empresas</title>' +
         '<style>' + relCssImpressao() + '</style>' +
         '</head><body>' +
           '<div class="topo">' +
             '<div class="logo-esq"><img src="logo.png" alt="KCN"></div>' +
             '<div class="titulo">' +
-              '<h1>Relatório Mensal das 3 Empresas</h1>' +
+              '<h1>Relatório Mensal das 4 Empresas</h1>' +
               '<div>Período: ' + relEscapePrint(periodo) + '</div>' +
             '</div>' +
             '<div class="logo-dir">' +
               '<img src="logo-acp.png" alt="ACP">' +
               '<img src="logo-sleep.png" alt="Sleep">' +
               '<img src="logo-thais.png" alt="Thaís">' +
+              '<img src="logo-jw.jpg" alt="JW">' +
             '</div>' +
           '</div>' +
 
@@ -11294,7 +11318,7 @@ function abrirRelatoriosDireto(){
 
     }catch(e){
       console.error('Erro ao imprimir relatório das empresas:', e);
-      toast(e.message || 'Erro ao imprimir relatório das 3 empresas','error');
+      toast(e.message || 'Erro ao imprimir relatório das 4 empresas','error');
     }
   };
 
@@ -11312,7 +11336,7 @@ function abrirRelatoriosDireto(){
         const btn3 = document.createElement('button');
         btn3.id = 'btn-imprimir-tres-empresas';
         btn3.className = 'btn btn-success';
-        btn3.textContent = 'Imprimir 3 empresas';
+        btn3.textContent = 'Imprimir 4 empresas';
         btn3.addEventListener('click', window.imprimirRelatorioTresEmpresas);
 
         btnImprimir.insertAdjacentElement('afterend', btn3);
@@ -12775,6 +12799,7 @@ function abrirRelatoriosDireto(){
 
     if(e === 'sleep') return 'Sleep Colchões';
     if(e === 'tais') return 'Thaís Móveis';
+    if(e === 'jw') return 'JW Móveis';
 
     return 'ACP Indústria de Móveis';
   }
@@ -12784,6 +12809,7 @@ function abrirRelatoriosDireto(){
 
     if(e === 'sleep') return 'logo-sleep.png';
     if(e === 'tais') return 'logo-thais.png';
+    if(e === 'jw') return 'logo-jw.jpg';
 
     return 'logo-acp.png';
   }
@@ -13047,6 +13073,7 @@ function abrirRelatoriosDireto(){
 
     if(e === 'sleep') return 'Sleep Colchões';
     if(e === 'tais') return 'Thaís Móveis';
+    if(e === 'jw') return 'JW Móveis';
 
     return 'ACP Indústria de Móveis';
   }
@@ -13056,6 +13083,7 @@ function abrirRelatoriosDireto(){
 
     if(e === 'sleep') return 'logo-sleep.png';
     if(e === 'tais') return 'logo-thais.png';
+    if(e === 'jw') return 'logo-jw.jpg';
 
     return 'logo-acp.png';
   }
@@ -13190,6 +13218,7 @@ function abrirRelatoriosDireto(){
 
     if(e === 'sleep') return 'Sleep Colchões';
     if(e === 'tais') return 'Thaís Móveis';
+    if(e === 'jw') return 'JW Móveis';
 
     return 'ACP Indústria de Móveis';
   }
@@ -13199,6 +13228,7 @@ function abrirRelatoriosDireto(){
 
     if(e === 'sleep') return 'logo-sleep.png';
     if(e === 'tais') return 'logo-thais.png';
+    if(e === 'jw') return 'logo-jw.jpg';
 
     return 'logo-acp.png';
   }
@@ -13480,6 +13510,7 @@ function abrirRelatoriosDireto(){
 
     if(e === 'sleep') return 'Sleep Colchões';
     if(e === 'tais') return 'Thaís Móveis';
+    if(e === 'jw') return 'JW Móveis';
 
     return 'ACP Indústria de Móveis';
   }
@@ -13489,6 +13520,7 @@ function abrirRelatoriosDireto(){
 
     if(e === 'sleep') return 'logo-sleep.png';
     if(e === 'tais') return 'logo-thais.png';
+    if(e === 'jw') return 'logo-jw.jpg';
 
     return 'logo-acp.png';
   }

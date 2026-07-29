@@ -535,7 +535,8 @@ app.get('/api/relatorios/resumo-empresas', auth, async (req, res) => {
   const empresas = [
     { id: 'acp', nome: 'ACP Indústria de Móveis' },
     { id: 'sleep', nome: 'Sleep Colchões' },
-    { id: 'tais', nome: 'Thaís Móveis' }
+    { id: 'tais', nome: 'Thaís Móveis' },
+    { id: 'jw', nome: 'JW Móveis' }
   ];
 
   try {
