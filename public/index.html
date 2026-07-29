@@ -6788,17 +6788,33 @@ function atualizarDashboardSeVisivel(){
   if(page&&page.classList.contains('active')) carregarDashboard();
 }
 
+function limparDashboard(mensagem){
+  document.getElementById('dash-clientes').textContent='0';
+  document.getElementById('dash-pedidos').textContent='0';
+  document.getElementById('dash-abertos').textContent='0';
+  document.getElementById('dash-faturamento').textContent='R$ 0,00';
+  document.getElementById('dash-tabela').innerHTML=
+    '<tr><td colspan="5" class="empty-state"><p>'+(mensagem||'Nenhum pedido encontrado')+'</p></td></tr>';
+}
+
 async function carregarDashboard(){
+  limparDashboard('Carregando...');
+
   try{
     const d=await api('/api/dashboard?empresa='+encodeURIComponent(empresaAtual));
     document.getElementById('dash-clientes').textContent=d.totalClientes;
     document.getElementById('dash-pedidos').textContent=d.totalPedidos;
     document.getElementById('dash-abertos').textContent=d.pedidosAbertos;
     document.getElementById('dash-faturamento').textContent='R$ '+formatMoeda(d.faturamento);
-    document.getElementById('dash-tabela').innerHTML=d.ultimosPedidos.map(function(p){
+    const ultimosPedidos = Array.isArray(d.ultimosPedidos) ? d.ultimosPedidos : [];
+    document.getElementById('dash-tabela').innerHTML=ultimosPedidos.length ? ultimosPedidos.map(function(p){
       return '<tr><td>'+p.numero+'</td><td>'+p.cliente_nome+'</td><td>'+formatData(p.data_pedido)+'</td><td>R$ '+formatMoeda(p.total)+'</td><td>'+badgeStatus(p.status)+'</td></tr>';
-    }).join('');
-  }catch{toast('Erro ao carregar dashboard','error');}
+    }).join('') : '<tr><td colspan="5" class="empty-state"><p>Nenhum pedido encontrado</p></td></tr>';
+  }catch(e){
+    limparDashboard('Nao foi possivel carregar o dashboard desta empresa');
+    toast('Erro ao carregar dashboard','error');
+    console.error(e);
+  }
 }
 
 async function carregarClientes(){
