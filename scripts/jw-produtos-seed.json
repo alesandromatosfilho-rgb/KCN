@@ -3,7 +3,7 @@
     "codigo": "JW001",
     "descricao": "GUARDA ROUPA 6 PORTAS E 3 GAV. ENCAIXADO ESMAEL",
     "unidade": "UN",
-    "preco_venda": 1037,
+    "preco_venda": 1017,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -12,7 +12,7 @@
     "codigo": "JW002",
     "descricao": "GUARDA ROUPA 6 P E 3 GAV. ENCAIXADO ESMAEL POPULAR",
     "unidade": "UN",
-    "preco_venda": 869,
+    "preco_venda": 852,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -21,7 +21,7 @@
     "codigo": "JW003",
     "descricao": "GUARDA ROUPA 4 PORTAS E 4 GAV. TONINHO",
     "unidade": "UN",
-    "preco_venda": 815,
+    "preco_venda": 799,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -30,7 +30,7 @@
     "codigo": "JW004",
     "descricao": "GUARDA ROUPA 4 PORTAS E 2 GAV. LARA",
     "unidade": "UN",
-    "preco_venda": 733,
+    "preco_venda": 719,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -39,7 +39,7 @@
     "codigo": "JW005",
     "descricao": "GUARDA ROUPA 3 PORTAS POPULAR",
     "unidade": "UN",
-    "preco_venda": 570,
+    "preco_venda": 559,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -48,7 +48,7 @@
     "codigo": "JW006",
     "descricao": "GUARDA ROUPA 2 PORTAS NADIA",
     "unidade": "UN",
-    "preco_venda": 427,
+    "preco_venda": 419,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -57,7 +57,7 @@
     "codigo": "JW007",
     "descricao": "COMODA GRANDE VITORIA",
     "unidade": "UN",
-    "preco_venda": 565,
+    "preco_venda": 554,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -66,7 +66,7 @@
     "codigo": "JW008",
     "descricao": "COMODA PEQUENA LAISA",
     "unidade": "UN",
-    "preco_venda": 322,
+    "preco_venda": 316,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -75,7 +75,7 @@
     "codigo": "JW009",
     "descricao": "COMODA SAPATEIRA LILI",
     "unidade": "UN",
-    "preco_venda": 463,
+    "preco_venda": 454,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -84,7 +84,7 @@
     "codigo": "JW010",
     "descricao": "COMODA POPULAR",
     "unidade": "UN",
-    "preco_venda": 346,
+    "preco_venda": 339,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -93,7 +93,7 @@
     "codigo": "JW011",
     "descricao": "PENTEADEIRA JULIA",
     "unidade": "UN",
-    "preco_venda": 458,
+    "preco_venda": 449,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -102,7 +102,7 @@
     "codigo": "JW012",
     "descricao": "BANCO PARA PENTEADEIRA",
     "unidade": "UN",
-    "preco_venda": 180,
+    "preco_venda": 177,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -111,7 +111,7 @@
     "codigo": "JW013",
     "descricao": "ARMARIO P/ COZINHA GRANDE HUGO",
     "unidade": "UN",
-    "preco_venda": 682,
+    "preco_venda": 684,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -120,7 +120,7 @@
     "codigo": "JW014",
     "descricao": "ARMARIO P/ COZINHA PEQUENO JOSA",
     "unidade": "UN",
-    "preco_venda": 427,
+    "preco_venda": 419,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -129,7 +129,7 @@
     "codigo": "JW015",
     "descricao": "AEREO PARA COZINHA ANA",
     "unidade": "UN",
-    "preco_venda": 296,
+    "preco_venda": 290,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -138,7 +138,7 @@
     "codigo": "JW016",
     "descricao": "BALCAO PARA COZINHA LEO",
     "unidade": "UN",
-    "preco_venda": 369,
+    "preco_venda": 362,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -147,7 +147,7 @@
     "codigo": "JW017",
     "descricao": "RACK JULIANA",
     "unidade": "UN",
-    "preco_venda": 349,
+    "preco_venda": 342,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -156,7 +156,7 @@
     "codigo": "JW018",
     "descricao": "PAINEL JULIANA",
     "unidade": "UN",
-    "preco_venda": 294,
+    "preco_venda": 288,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -165,7 +165,7 @@
     "codigo": "JW019",
     "descricao": "RACK PEQUENO CECILIA",
     "unidade": "UN",
-    "preco_venda": 243,
+    "preco_venda": 238,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -174,7 +174,7 @@
     "codigo": "JW020",
     "descricao": "MULTIUSO COM PORTAS BIA",
     "unidade": "UN",
-    "preco_venda": 381,
+    "preco_venda": 374,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -183,7 +183,7 @@
     "codigo": "JW021",
     "descricao": "MULTIUSO SEM PORTAS ADRI",
     "unidade": "UN",
-    "preco_venda": 244,
+    "preco_venda": 239,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -192,7 +192,7 @@
     "codigo": "JW022",
     "descricao": "BAU MARIA",
     "unidade": "UN",
-    "preco_venda": 173,
+    "preco_venda": 170,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -201,7 +201,7 @@
     "codigo": "JW023",
     "descricao": "MESA PEQUENA ERIC",
     "unidade": "UN",
-    "preco_venda": 216,
+    "preco_venda": 212,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -210,7 +210,7 @@
     "codigo": "JW024",
     "descricao": "MESA GRANDE DAVI",
     "unidade": "UN",
-    "preco_venda": 249,
+    "preco_venda": 244,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -219,7 +219,7 @@
     "codigo": "JW025",
     "descricao": "CABECEIRA SOLTEIRO LEVI",
     "unidade": "UN",
-    "preco_venda": 218,
+    "preco_venda": 214,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
@@ -228,7 +228,7 @@
     "codigo": "JW026",
     "descricao": "CABECEIRA CASAL KELY",
     "unidade": "UN",
-    "preco_venda": 322,
+    "preco_venda": 316,
     "estoque": 0,
     "colecao_id": 0,
     "empresa": "jw"
