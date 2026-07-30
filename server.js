@@ -104,9 +104,11 @@ function empresaDaRequisicao(req) {
   );
 }
 
-function normalizarTabelaPedido(valor) {
+function normalizarTabelaPedido(valor, empresa) {
   const tabela = String(valor || '').trim();
-  return ['1', '2'].includes(tabela) ? tabela : '';
+  const emp = normalizarEmpresa(empresa);
+  const opcoes = emp === 'acp' ? ['1', '12', '29'] : ['1', '2'];
+  return opcoes.includes(tabela) ? tabela : '';
 }
 
 async function garantirColunaFretePedido() {
@@ -1178,7 +1180,7 @@ app.post('/api/pedidos', auth, async (req, res) => {
 
   const emp = empresaDaRequisicao(req);
   const emitirEmPedido = emp === 'jw' ? String(emitir_em || '').trim() : '';
-  const tabelaPedido = emp === 'jw' ? normalizarTabelaPedido(tabela) : '';
+  const tabelaPedido = ['acp', 'jw'].includes(emp) ? normalizarTabelaPedido(tabela, emp) : '';
 
   const total = calcularTotalPedidoSeguro(itensValidos);
 
@@ -1274,7 +1276,7 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
   const pedidoId = req.params.id;
   const emp = empresaDaRequisicao(req);
   const emitirEmPedido = emp === 'jw' ? String(emitir_em || '').trim() : '';
-  const tabelaPedido = emp === 'jw' ? normalizarTabelaPedido(tabela) : '';
+  const tabelaPedido = ['acp', 'jw'].includes(emp) ? normalizarTabelaPedido(tabela, emp) : '';
 
   const itensValidos = normalizarItensPedidoSeguro(itens);
 

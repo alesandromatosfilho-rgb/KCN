@@ -5623,6 +5623,18 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
       </div>
     </div>
 
+    <div class="form-row" id="linha-tabela-acp" style="display:none">
+      <div class="form-group">
+        <label>Tabela</label>
+        <select id="ped-tabela-acp">
+          <option value="">Selecione a tabela...</option>
+          <option value="1">1</option>
+          <option value="12">12</option>
+          <option value="29">29</option>
+        </select>
+      </div>
+    </div>
+
     <div class="form-group">
       <label>Observação</label>
       <textarea id="ped-obs" rows="2" style="resize:none"></textarea>
@@ -7438,6 +7450,20 @@ function atualizarCamposEmissaoJw(empresa, limparValores){
   }
 }
 
+function atualizarCamposTabelaAcp(empresa, limparValores){
+  const ehAcp = normalizarEmpresaFront(empresa || empresaAtual) === 'acp';
+  const linha = document.getElementById('linha-tabela-acp');
+  const tabela = document.getElementById('ped-tabela-acp');
+
+  if(linha){
+    linha.style.display = ehAcp ? '' : 'none';
+  }
+
+  if(!ehAcp || limparValores){
+    if(tabela) tabela.value = '';
+  }
+}
+
 async function abrirModalPedido(){
   pedidoEditandoId = null;
   pedidoEditandoEmpresa = null;
@@ -7480,6 +7506,7 @@ async function abrirModalPedido(){
     if(document.getElementById('ped-cliente')) document.getElementById('ped-cliente').dataset.originalId = '';
     if(document.getElementById('ped-forma-pagamento')) document.getElementById('ped-forma-pagamento').value = '';
     atualizarCamposEmissaoJw(empresaAtual, true);
+    atualizarCamposTabelaAcp(empresaAtual, true);
     document.getElementById('total-pedido').textContent = '0,00';
 
     abrirModal('modal-pedido');
@@ -7980,7 +8007,9 @@ async function abrirModalEditarPedido(id){
     if(document.getElementById('ped-forma-pagamento')) document.getElementById('ped-forma-pagamento').value = pedido.forma_pagamento || '';
     if(document.getElementById('ped-emitir-em-jw')) document.getElementById('ped-emitir-em-jw').value = pedido.emitir_em || '';
     if(document.getElementById('ped-tabela-jw')) document.getElementById('ped-tabela-jw').value = pedido.tabela || '';
+    if(document.getElementById('ped-tabela-acp')) document.getElementById('ped-tabela-acp').value = pedido.tabela || '';
     atualizarCamposEmissaoJw(pedidoEditandoEmpresa || empresaAtual, false);
+    atualizarCamposTabelaAcp(pedidoEditandoEmpresa || empresaAtual, false);
     document.getElementById('ped-obs').value = pedido.observacao || '';
     document.getElementById('tabela-itens').innerHTML = '';
     pedidoItemSeq = 0;
@@ -8049,9 +8078,13 @@ async function salvarPedido(){
   const frete = document.getElementById('ped-frete') ? document.getElementById('ped-frete').value : '';
   const forma_pagamento = document.getElementById('ped-forma-pagamento') ? document.getElementById('ped-forma-pagamento').value : '';
   const empresaDoPedido = pedidoEditandoEmpresa || empresaAtual;
-  const pedidoJw = normalizarEmpresaFront(empresaDoPedido) === 'jw';
+  const empresaNormalizadaPedido = normalizarEmpresaFront(empresaDoPedido);
+  const pedidoJw = empresaNormalizadaPedido === 'jw';
+  const pedidoAcp = empresaNormalizadaPedido === 'acp';
   const emitir_em = pedidoJw && document.getElementById('ped-emitir-em-jw') ? document.getElementById('ped-emitir-em-jw').value : '';
-  const tabela = pedidoJw && document.getElementById('ped-tabela-jw') ? document.getElementById('ped-tabela-jw').value : '';
+  const tabela = pedidoJw && document.getElementById('ped-tabela-jw')
+    ? document.getElementById('ped-tabela-jw').value
+    : (pedidoAcp && document.getElementById('ped-tabela-acp') ? document.getElementById('ped-tabela-acp').value : '');
   const observacao = document.getElementById('ped-obs').value || '';
 
   const tbody = document.getElementById('tabela-itens');
@@ -8301,23 +8334,28 @@ function pedidoEhJw(p){
   return normalizarEmpresaFront((p && p.empresa) || empresaAtual) === 'jw';
 }
 
+function pedidoUsaTabela(p){
+  const empresaPedido = normalizarEmpresaFront((p && p.empresa) || empresaAtual);
+  return empresaPedido === 'jw' || empresaPedido === 'acp';
+}
+
 function camposEmissaoJwDetalhe(p){
-  if(!pedidoEhJw(p)){
+  if(!pedidoUsaTabela(p)){
     return '';
   }
 
   return '' +
-    (p.emitir_em ? '<br><b>Emitir em:</b> ' + valorPedidoSeguro(p.emitir_em) : '') +
+    (pedidoEhJw(p) && p.emitir_em ? '<br><b>Emitir em:</b> ' + valorPedidoSeguro(p.emitir_em) : '') +
     (p.tabela ? '<br><b>Tabela:</b> ' + valorPedidoSeguro(p.tabela) : '');
 }
 
 function camposEmissaoJwGrid(p, seguro){
-  if(!pedidoEhJw(p)){
+  if(!pedidoUsaTabela(p)){
     return '';
   }
 
   return '' +
-    (p.emitir_em ? '<div class="campo"><span class="label">Emitir em:</span> ' + seguro(p.emitir_em) + '</div>' : '') +
+    (pedidoEhJw(p) && p.emitir_em ? '<div class="campo"><span class="label">Emitir em:</span> ' + seguro(p.emitir_em) + '</div>' : '') +
     (p.tabela ? '<div class="campo"><span class="label">Tabela:</span> ' + seguro(p.tabela) + '</div>' : '');
 }
 
