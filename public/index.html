@@ -11556,6 +11556,7 @@ function abrirRelatoriosDireto(){
               '<div class="campo"><span class="label">Prazo:</span> ' + pedidoPrintSeguro(p.data_entrega) + '</div>' +
               '<div class="campo"><span class="label">Frete:</span> ' + pedidoPrintSeguro(p.frete || '-') + '</div>' +
               '<div class="campo full"><span class="label">Forma de Pagamento:</span> ' + pedidoPrintSeguro(p.forma_pagamento || '-') + '</div>' +
+              camposEmissaoJwGrid(p, pedidoPrintSeguro) +
             '</div>' +
           '</div>' +
 
@@ -11965,6 +11966,7 @@ function abrirRelatoriosDireto(){
             '<div class="campo"><span class="label">Número:</span> ' + impSeguro(p.numero) + '</div>' +
             '<div class="campo"><span class="label">Frete:</span> ' + impSeguro(p.frete || '-') + '</div>' +
             '<div class="campo"><span class="label">Forma de Pagamento:</span> ' + impSeguro(p.forma_pagamento || '-') + '</div>' +
+            camposEmissaoJwGrid(p, impSeguro) +
             '<div class="campo"><span class="label">Data:</span> ' + formatData(p.data_pedido) + '</div>' +
             '<div class="campo full"><span class="label">Prazo:</span> ' + impSeguro(p.data_entrega) + '</div>' +
           '</div>' +
@@ -12169,6 +12171,7 @@ function abrirRelatoriosDireto(){
             '<div class="campo"><span class="label">Número:</span> ' + impSeguro(p.numero) + '</div>' +
             '<div class="campo"><span class="label">Frete:</span> ' + impSeguro(p.frete || '-') + '</div>' +
             '<div class="campo"><span class="label">Forma de Pagamento:</span> ' + impSeguro(p.forma_pagamento || '-') + '</div>' +
+            camposEmissaoJwGrid(p, impSeguro) +
             '<div class="campo"><span class="label">Data:</span> ' + formatData(p.data_pedido) + '</div>' +
             '<div class="campo full"><span class="label">Prazo:</span> ' + impSeguro(p.data_entrega) + '</div>' +
           '</div>' +
@@ -12377,6 +12380,7 @@ function abrirRelatoriosDireto(){
             '<div class="campo"><span class="label">Número:</span> ' + impSeguro(p.numero) + '</div>' +
             '<div class="campo"><span class="label">Frete:</span> ' + impSeguro(p.frete || '-') + '</div>' +
             '<div class="campo"><span class="label">Forma de Pagamento:</span> ' + impSeguro(p.forma_pagamento || '-') + '</div>' +
+            camposEmissaoJwGrid(p, impSeguro) +
             '<div class="campo"><span class="label">Data:</span> ' + formatData(p.data_pedido) + '</div>' +
             '<div class="campo full"><span class="label">Prazo:</span> ' + impSeguro(p.data_entrega) + '</div>' +
           '</div>' +
@@ -12586,6 +12590,7 @@ function abrirRelatoriosDireto(){
             '<div class="campo"><span class="label">Número:</span> ' + impSeguro(p.numero) + '</div>' +
             '<div class="campo"><span class="label">Frete:</span> ' + impSeguro(p.frete || '-') + '</div>' +
             '<div class="campo"><span class="label">Forma de Pagamento:</span> ' + impSeguro(p.forma_pagamento || '-') + '</div>' +
+            camposEmissaoJwGrid(p, impSeguro) +
             '<div class="campo"><span class="label">Data:</span> ' + formatData(p.data_pedido) + '</div>' +
             '<div class="campo full"><span class="label">Prazo:</span> ' + impSeguro(p.data_entrega) + '</div>' +
           '</div>' +
@@ -12798,6 +12803,7 @@ function abrirRelatoriosDireto(){
             '<div class="campo"><span class="label">Número:</span> ' + impSeguro(p.numero) + '</div>' +
             '<div class="campo"><span class="label">Frete:</span> ' + impSeguro(p.frete || '-') + '</div>' +
             '<div class="campo"><span class="label">Forma de Pagamento:</span> ' + impSeguro(p.forma_pagamento || '-') + '</div>' +
+            camposEmissaoJwGrid(p, impSeguro) +
             '<div class="campo"><span class="label">Data:</span> ' + formatData(p.data_pedido) + '</div>' +
             '<div class="campo full"><span class="label">Prazo:</span> ' + impSeguro(p.data_entrega) + '</div>' +
           '</div>' +
