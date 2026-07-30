@@ -5608,47 +5608,6 @@ body #app .main-content #page-dashboard .cards-grid > .card .card-number{
       </div>
     </div>
 
-  <div class="form-group">
-    <label>Frete</label>
-    <input id="ped-frete" type="text" placeholder="Ex: CIF, FOB, R$ 100,00 ou a combinar"/>
-  </div>
-  <div class="form-group">
-    <label>Forma de Pagamento</label>
-    <select id="ped-forma-pagamento">
-      <option value="">Selecione a forma de pagamento...</option>
-      <option value="Boleto Bancário">Boleto Bancário</option>
-      <option value="Cheque">Cheque</option>
-      <option value="Blu">Blu</option>
-    </select>
-  </div>
-</div>
-<div class="form-row" id="linha-tabela-jw" style="display:none">
-  <div class="form-group">
-    <label>Tabela</label>
-    <select id="ped-tabela-jw">
-      <option value="">Selecione a tabela...</option>
-      <option value="Tabela A">Tabela A</option>
-      <option value="Tabela B">Tabela B</option>
-    </select>
-  </div>
-  <div class="form-group">
-    <label>Emitir nota em:</label>
-    <input id="ped-emitir-nota-jw" type="text" placeholder="Ex: Nome/Razão Social"/>
-  </div>
-</div>
-
-<div class="form-row" id="linha-tabela-acp">
-  <div class="form-group">
-    <label>Tabela</label>
-    <select id="ped-tabela">
-      <option value="">Selecione a tabela...</option>
-      <option value="Tabela 1">1</option>
-      <option value="Tabela 12">12</option>
-      <option value="Tabela 29">29</option>
-    </select>
-  </div>
-</div>
-
     <div class="form-group">
       <label>Observação</label>
       <textarea id="ped-obs" rows="2" style="resize:none"></textarea>
@@ -8927,20 +8886,6 @@ function selecionarEmpresa(el, nome, sigla, cor) {
   atualizarMenuProdutos();
   showPage('dashboard', 'Painel de Bordo');
   toast('Empresa ' + nome + ' selecionada!');
-
-
- // NOVO: mostra o campo "Tabela" só quando a empresa for ACP
-const linhaTabela = document.getElementById('linha-tabela-acp');
-if (linhaTabela) {
-  linhaTabela.style.display = (empresaAtual === 'acp') ? '' : 'none';
-}
-
-// NOVO: mostra o campo "Tabela" só quando a empresa for JW
-const linhaTabelaJw = document.getElementById('linha-tabela-jw');
-if (linhaTabelaJw) {
-  linhaTabelaJw.style.display = (empresaAtual === 'jw') ? '' : 'none';
-}
-
 atualizarMenuProdutos();
 }
 
