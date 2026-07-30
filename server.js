@@ -104,9 +104,16 @@ function empresaDaRequisicao(req) {
   );
 }
 
+function normalizarTabelaPedido(valor) {
+  const tabela = String(valor || '').trim();
+  return ['1', '2'].includes(tabela) ? tabela : '';
+}
+
 async function garantirColunaFretePedido() {
   await run(`ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS frete TEXT DEFAULT ''`);
   await run(`ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS forma_pagamento TEXT DEFAULT ''`);
+  await run(`ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS emitir_em TEXT DEFAULT ''`);
+  await run(`ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS tabela TEXT DEFAULT ''`);
 }
 
 
@@ -1153,6 +1160,8 @@ app.post('/api/pedidos', auth, async (req, res) => {
     data_entrega,
     frete,
     forma_pagamento,
+    emitir_em,
+    tabela,
     observacao,
     itens,
     empresa,
@@ -1167,7 +1176,9 @@ app.post('/api/pedidos', auth, async (req, res) => {
     });
   }
 
-const emp = empresaDaRequisicao(req);
+  const emp = empresaDaRequisicao(req);
+  const emitirEmPedido = emp === 'jw' ? String(emitir_em || '').trim() : '';
+  const tabelaPedido = emp === 'jw' ? normalizarTabelaPedido(tabela) : '';
 
   const total = calcularTotalPedidoSeguro(itensValidos);
 
@@ -1185,8 +1196,8 @@ const emp = empresaDaRequisicao(req);
 
     const r = await run(
       `INSERT INTO pedidos 
-      (numero, cliente_id, vendedor_id, data_entrega, frete, forma_pagamento, observacao, total, empresa, cor) 
-      VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      (numero, cliente_id, vendedor_id, data_entrega, frete, forma_pagamento, emitir_em, tabela, observacao, total, empresa, cor)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         numeroTemporario,
         cliente_id,
@@ -1194,6 +1205,8 @@ const emp = empresaDaRequisicao(req);
         data_entrega || '',
         frete || '',
         forma_pagamento || '',
+        emitirEmPedido,
+        tabelaPedido,
         observacao || '',
         total,
         emp,
@@ -1250,6 +1263,8 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
     data_entrega,
     frete,
     forma_pagamento,
+    emitir_em,
+    tabela,
     observacao,
     itens,
     empresa,
@@ -1258,6 +1273,8 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
 
   const pedidoId = req.params.id;
   const emp = empresaDaRequisicao(req);
+  const emitirEmPedido = emp === 'jw' ? String(emitir_em || '').trim() : '';
+  const tabelaPedido = emp === 'jw' ? normalizarTabelaPedido(tabela) : '';
 
   const itensValidos = normalizarItensPedidoSeguro(itens);
 
@@ -1293,6 +1310,8 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
            data_entrega = ?,
            frete = ?,
            forma_pagamento = ?,
+           emitir_em = ?,
+           tabela = ?,
            observacao = ?,
            total = ?,
            empresa = ?,
@@ -1303,6 +1322,8 @@ app.put('/api/pedidos/:id', auth, async (req, res) => {
         data_entrega || '',
         frete || '',
         forma_pagamento || '',
+        emitirEmPedido,
+        tabelaPedido,
         observacao || '',
         total,
         emp,
